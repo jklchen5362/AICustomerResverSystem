@@ -94,6 +94,13 @@ struct SettingsView: View {
                 }
             }
             
+            // User Guide Help
+            Section("說明與支援 Help") {
+                NavigationLink(destination: UserGuideView()) {
+                    Label("系統使用指南 User Guide", systemImage: "book.pages.fill")
+                }
+            }
+            
             // About info
             Section("關於系統 About") {
                 HStack {

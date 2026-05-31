@@ -35,23 +35,38 @@ class DashboardViewModel {
     init() {}
     
     @MainActor
-    func refresh(context: ModelContext) {
+    func refresh(context: ModelContext, branch: Branch? = nil) {
         do {
             // 1. Total Customers
             let customerDesc = FetchDescriptor<Customer>()
             let allCustomers = (try? context.fetch(customerDesc)) ?? []
-            self.totalCustomers = allCustomers.count
             
-            // Recent Customers (last 5 created)
-            self.recentCustomers = Array(allCustomers.sorted(by: { $0.createdAt > $1.createdAt }).prefix(5))
+            // Filter customers by selected branch (check if they have packages, appointments, or invoices associated with the branch)
+            var filteredCustomers = allCustomers
+            if let selectedBranch = branch {
+                filteredCustomers = allCustomers.filter { customer in
+                    customer.appointments.contains(where: { $0.branch?.persistentModelID == selectedBranch.persistentModelID }) ||
+                    customer.packages.contains(where: { $0.purchaseBranch?.persistentModelID == selectedBranch.persistentModelID }) ||
+                    customer.invoices.contains(where: { $0.branch?.persistentModelID == selectedBranch.persistentModelID })
+                }
+            }
+            
+            self.totalCustomers = filteredCustomers.count
+            self.recentCustomers = Array(filteredCustomers.sorted(by: { $0.createdAt > $1.createdAt }).prefix(5))
             
             // 2. Packages Sold & Remaining Sessions
             let packageDesc = FetchDescriptor<TreatmentPackage>()
             let allPackages = (try? context.fetch(packageDesc)) ?? []
-            self.totalPackagesSold = allPackages.count
+            
+            var filteredPackages = allPackages
+            if let selectedBranch = branch {
+                filteredPackages = allPackages.filter { $0.purchaseBranch?.persistentModelID == selectedBranch.persistentModelID }
+            }
+            
+            self.totalPackagesSold = filteredPackages.count
             
             var remaining = 0
-            for package in allPackages {
+            for package in filteredPackages {
                 remaining += package.remainingSessions
             }
             self.totalRemainingSessions = remaining
@@ -60,17 +75,22 @@ class DashboardViewModel {
             let appointmentDesc = FetchDescriptor<Appointment>()
             let allAppointments = (try? context.fetch(appointmentDesc)) ?? []
             
+            var filteredAppointments = allAppointments
+            if let selectedBranch = branch {
+                filteredAppointments = allAppointments.filter { $0.branch?.persistentModelID == selectedBranch.persistentModelID }
+            }
+            
             let today = Date().startOfDay
             let endOfToday = Date().endOfDay
             
             // Today's appointments
-            self.todayAppointments = allAppointments.filter { 
+            self.todayAppointments = filteredAppointments.filter { 
                 $0.appointmentDate >= today && $0.appointmentDate <= endOfToday && $0.status != .cancelled 
             }.sorted(by: { $0.startTime < $1.startTime })
             self.todayAppointmentCount = self.todayAppointments.count
             
             // Upcoming appointments (from tomorrow onwards)
-            self.upcomingAppointments = allAppointments.filter {
+            self.upcomingAppointments = filteredAppointments.filter {
                 $0.appointmentDate > endOfToday && $0.status == .confirmed
             }.sorted(by: { $0.appointmentDate < $1.appointmentDate })
             
@@ -78,10 +98,15 @@ class DashboardViewModel {
             let invoiceDesc = FetchDescriptor<Invoice>()
             let allInvoices = (try? context.fetch(invoiceDesc)) ?? []
             
+            var filteredInvoices = allInvoices
+            if let selectedBranch = branch {
+                filteredInvoices = allInvoices.filter { $0.branch?.persistentModelID == selectedBranch.persistentModelID }
+            }
+            
             let startOfMonth = Date().startOfMonth
             let endOfMonth = Date().endOfMonth
             
-            let thisMonthInvoices = allInvoices.filter {
+            let thisMonthInvoices = filteredInvoices.filter {
                 $0.purchaseDate >= startOfMonth && $0.purchaseDate <= endOfMonth
             }
             self.monthlyRevenue = thisMonthInvoices.reduce(0.0) { $0 + $1.amount }
@@ -100,7 +125,7 @@ class DashboardViewModel {
                     formatter.locale = Locale(identifier: "zh_TW")
                     let monthName = formatter.string(from: monthDate)
                     
-                    let monthInvoices = allInvoices.filter {
+                    let monthInvoices = filteredInvoices.filter {
                         $0.purchaseDate >= mStart && $0.purchaseDate <= mEnd
                     }
                     let monthAmount = monthInvoices.reduce(0.0) { $0 + $1.amount }

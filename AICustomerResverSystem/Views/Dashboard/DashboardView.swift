@@ -12,6 +12,24 @@ struct DashboardView: View {
     @Query private var packages: [TreatmentPackage]
     @Query private var invoices: [Invoice]
     
+    @Query(sort: \Branch.name) private var branches: [Branch]
+    @State private var selectedBranchID: PersistentIdentifier? = nil
+    
+    private var selectedBranchName: String {
+        if let branchID = selectedBranchID,
+           let branch = branches.first(where: { $0.persistentModelID == branchID }) {
+            return branch.name
+        }
+        return "全部分店"
+    }
+    
+    private func refreshData() {
+        let branch = selectedBranchID.flatMap { id in
+            branches.first(where: { $0.persistentModelID == id })
+        }
+        viewModel.refresh(context: modelContext, branch: branch)
+    }
+    
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -177,13 +195,61 @@ struct DashboardView: View {
             .background(AppTheme.Colors.background)
             .navigationTitle("儀表板")
             .navigationBarTitleDisplayMode(.inline)
-            .onAppear {
-                viewModel.refresh(context: modelContext)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            withAnimation(AppTheme.Animations.quick) {
+                                selectedBranchID = nil
+                            }
+                        } label: {
+                            HStack {
+                                Text("全部分店 (All)")
+                                if selectedBranchID == nil {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                        
+                        ForEach(branches) { branch in
+                            Button {
+                                withAnimation(AppTheme.Animations.quick) {
+                                    selectedBranchID = branch.persistentModelID
+                                }
+                            } label: {
+                                HStack {
+                                    Text(branch.name)
+                                    if selectedBranchID == branch.persistentModelID {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "building.2.fill")
+                                .font(.system(size: 11))
+                            Text(selectedBranchName)
+                                .font(.system(size: 11, weight: .bold))
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10))
+                        }
+                        .foregroundStyle(AppTheme.Colors.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(AppTheme.Colors.accent.opacity(0.12))
+                        .clipShape(Capsule())
+                    }
+                }
             }
-            .onChange(of: customers) { _, _ in viewModel.refresh(context: modelContext) }
-            .onChange(of: appointments) { _, _ in viewModel.refresh(context: modelContext) }
-            .onChange(of: packages) { _, _ in viewModel.refresh(context: modelContext) }
-            .onChange(of: invoices) { _, _ in viewModel.refresh(context: modelContext) }
+            .onAppear {
+                refreshData()
+            }
+            .onChange(of: selectedBranchID) { _, _ in refreshData() }
+            .onChange(of: customers) { _, _ in refreshData() }
+            .onChange(of: appointments) { _, _ in refreshData() }
+            .onChange(of: packages) { _, _ in refreshData() }
+            .onChange(of: invoices) { _, _ in refreshData() }
         }
     }
 }
