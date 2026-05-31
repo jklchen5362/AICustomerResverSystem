@@ -20,7 +20,10 @@ class AppState {
     
     // Google Sheets Sync Configuration
     var googleSpreadsheetID: String = "" {
-        didSet { UserDefaults.standard.set(googleSpreadsheetID, forKey: "google_spreadsheet_id") }
+        didSet { 
+            UserDefaults.standard.set(googleSpreadsheetID, forKey: "google_spreadsheet_id") 
+            setupAutoSyncTimer()
+        }
     }
     
     var googleSpreadsheetName: String = "" {
@@ -31,10 +34,58 @@ class AppState {
         didSet { UserDefaults.standard.set(googleLastSyncTime, forKey: "google_last_sync_time") }
     }
     
+    // Auto Sync Scheduler State
+    var googleAutoSyncEnabled: Bool = false {
+        didSet {
+            UserDefaults.standard.set(googleAutoSyncEnabled, forKey: "google_auto_sync_enabled")
+            setupAutoSyncTimer()
+        }
+    }
+    
+    var googleSyncIntervalMinutes: Int = 30 {
+        didSet {
+            UserDefaults.standard.set(googleSyncIntervalMinutes, forKey: "google_sync_interval_minutes")
+            setupAutoSyncTimer()
+        }
+    }
+    
+    @ObservationIgnored
+    var onTriggerAutoSync: (() -> Void)? = nil
+    
+    @ObservationIgnored
+    private var autoSyncTimer: Timer?
+    
     init() {
         self.googleSpreadsheetID = UserDefaults.standard.string(forKey: "google_spreadsheet_id") ?? ""
         self.googleSpreadsheetName = UserDefaults.standard.string(forKey: "google_spreadsheet_name") ?? ""
         self.googleLastSyncTime = UserDefaults.standard.double(forKey: "google_last_sync_time")
+        self.googleAutoSyncEnabled = UserDefaults.standard.bool(forKey: "google_auto_sync_enabled")
+        let savedInterval = UserDefaults.standard.integer(forKey: "google_sync_interval_minutes")
+        self.googleSyncIntervalMinutes = savedInterval > 0 ? savedInterval : 30
+    }
+    
+    func setupAutoSyncTimer() {
+        autoSyncTimer?.invalidate()
+        autoSyncTimer = nil
+        
+        guard googleAutoSyncEnabled && !googleSpreadsheetID.isEmpty else { return }
+        
+        autoSyncTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            self?.checkAndTriggerAutoSync()
+        }
+    }
+    
+    private func checkAndTriggerAutoSync() {
+        guard googleAutoSyncEnabled && !googleSpreadsheetID.isEmpty else { return }
+        let now = Date().timeIntervalSince1970
+        let intervalSeconds = Double(googleSyncIntervalMinutes * 60)
+        
+        if now - googleLastSyncTime >= intervalSeconds {
+            print("[AppState] Interval elapsed. Triggering auto background sync...")
+            DispatchQueue.main.async { [weak self] in
+                self?.onTriggerAutoSync?()
+            }
+        }
     }
     
     // Notification badge count

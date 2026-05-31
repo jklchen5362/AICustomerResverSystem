@@ -38,6 +38,20 @@ struct AICustomerResverSystemApp: App {
                     UNUserNotificationCenter.current().delegate = notificationDelegate
                     loadSampleDataIfNeeded()
                     
+                    // Setup callback for Google Sheets auto sync
+                    appState.onTriggerAutoSync = {
+                        let context = modelContainer.mainContext
+                        Task { @MainActor in
+                            do {
+                                try await GoogleSheetsSyncEngine.shared.syncAllData(context: context, spreadsheetID: appState.googleSpreadsheetID)
+                                print("[App] Scheduled auto-sync completed successfully.")
+                            } catch {
+                                print("[App] Scheduled auto-sync failed: \(error.localizedDescription)")
+                            }
+                        }
+                    }
+                    appState.setupAutoSyncTimer()
+                    
                     // Proactively request local notification permissions
                     Task {
                         _ = await NotificationService.shared.requestPermission()

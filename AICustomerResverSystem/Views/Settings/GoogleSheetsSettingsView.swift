@@ -220,6 +220,42 @@ struct GoogleSheetsSettingsView: View {
                 }
             }
             
+            if authService.isAuthorized && !appState.googleSpreadsheetID.isEmpty {
+                Section("自動背景同步設定 (Scheduled Auto Sync)") {
+                    Toggle(isOn: Bindable(appState).googleAutoSyncEnabled) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("啟用定時自動背景同步")
+                                .font(AppTheme.Typography.body)
+                                .fontWeight(.medium)
+                            Text("系統在背景偵測到間隔時間後自動進行鏡像對接")
+                                .font(AppTheme.Typography.caption)
+                                .foregroundStyle(AppTheme.Colors.textSecondary)
+                        }
+                    }
+                    .tint(AppTheme.Colors.accent)
+                    
+                    if appState.googleAutoSyncEnabled {
+                        HStack {
+                            Text("同步時間間隔")
+                                .font(AppTheme.Typography.body)
+                            Spacer()
+                            
+                            Stepper(value: Bindable(appState).googleSyncIntervalMinutes, in: 1...3600) {
+                                Text("\(appState.googleSyncIntervalMinutes) 分鐘")
+                                    .font(AppTheme.Typography.body)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(AppTheme.Colors.accent)
+                            }
+                            .frame(width: 170)
+                        }
+                        
+                        Text("時間間隔支援 1 分鐘至 3600 分鐘 (60 小時) 的自訂區間配置。")
+                            .font(AppTheme.Typography.caption2)
+                            .foregroundStyle(AppTheme.Colors.textTertiary)
+                    }
+                }
+            }
+            
             // Advanced Settings (Client ID configuration)
             Section("進階設定 (Developer Options)") {
                 Button {
