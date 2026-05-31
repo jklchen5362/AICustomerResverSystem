@@ -55,7 +55,7 @@ enum DatabaseType: String, CaseIterable, Identifiable, Codable {
     var iconName: String {
         switch self {
         case .localOnly:
-            return "iphone.personal"
+            return "iphone"
         case .privateCloud:
             return "cloud.fill"
         case .sharedCloud:

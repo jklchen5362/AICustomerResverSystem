@@ -44,11 +44,14 @@ struct CloudSyncSettingsView: View {
         .background(AppTheme.Colors.background.ignoresSafeArea())
         .navigationTitle("雲端同步設定")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("確認切換資料庫？", isPresented: $showSwitchConfirmation) {
-            Button("取消", role: .cancel) {
+        .alert(
+            cloudKitService.accountStatus == .available ? "啟用雲端自動同步與對接？" : "確認切換資料庫模式？",
+            isPresented: $showSwitchConfirmation
+        ) {
+            Button(cloudKitService.accountStatus == .available ? "暫時保持本機離線" : "取消", role: .cancel) {
                 pendingDatabaseType = nil
             }
-            Button("確認切換") {
+            Button(cloudKitService.accountStatus == .available ? "同步並合併資料 (Sync & Merge)" : "確認切換") {
                 if let newType = pendingDatabaseType {
                     withAnimation(AppTheme.Animations.smooth) {
                         databaseSelection = newType.rawValue
@@ -58,7 +61,11 @@ struct CloudSyncSettingsView: View {
             }
         } message: {
             if let newType = pendingDatabaseType {
-                Text("您即將將資料庫模式切換至「\(newType.title)」。\n\n切換後，系統會將本機儲存與該雲端資料庫重新加載，可能需要幾秒鐘進行初始對接。確認繼續嗎？")
+                if cloudKitService.accountStatus == .available {
+                    Text("系統偵測到您的 iCloud 帳戶已連線。\n\n啟用「\(newType.title)」後，本機原有的客戶檔案與預約記錄將會與雲端進行自動對接並合併。若您想保持純本機操作，請選擇暫時保持本機離線。")
+                } else {
+                    Text("您即將將資料庫模式切換至「\(newType.title)」。\n\n系統檢測到您尚未登入 iCloud 或專案未設定雲端權限。切換後，資料將安全地保持在本機離線狀態運作。確認繼續嗎？")
+                }
             } else {
                 Text("確認切換資料庫模式嗎？")
             }
@@ -84,7 +91,7 @@ struct CloudSyncSettingsView: View {
                 Image(systemName: "arrow.left.and.right")
                     .font(.system(size: 16))
                     .foregroundStyle(AppTheme.Colors.textSecondary)
-                Image(systemName: "iphone.personal")
+                Image(systemName: "iphone")
                     .font(.system(size: 24))
                     .foregroundStyle(AppTheme.Colors.primary)
             }
@@ -360,7 +367,7 @@ struct CloudSyncSettingsView: View {
                 showManageDataSheet = true
             } label: {
                 HStack {
-                    Image(systemName: "icloud.gearshape.fill")
+                    Image(systemName: "gearshape.2.fill")
                     Text("管理雲端同步資料與備份")
                 }
                 .font(AppTheme.Typography.body)
@@ -396,7 +403,7 @@ struct ManageCloudDataSheet: View {
             VStack(spacing: AppTheme.Spacing.lg) {
                 // Header
                 VStack(spacing: AppTheme.Spacing.xs) {
-                    Image(systemName: "icloud.gearshape.fill")
+                    Image(systemName: "gearshape.2.fill")
                         .font(.system(size: 40))
                         .foregroundStyle(AppTheme.Colors.accent)
                         .padding(.bottom, 4)
