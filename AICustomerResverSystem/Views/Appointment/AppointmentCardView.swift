@@ -42,7 +42,7 @@ struct AppointmentCardView: View {
                     HStack(spacing: 2) {
                         Image(systemName: "stethoscope")
                             .font(.system(size: 10))
-                        Text(appointment.doctor ?? "未分派")
+                        Text(appointment.doctor.isEmpty ? "未分派" : appointment.doctor)
                             .font(AppTheme.Typography.caption2)
                         
                         Text("•")
@@ -50,7 +50,7 @@ struct AppointmentCardView: View {
                         
                         Image(systemName: "person.fill")
                             .font(.system(size: 10))
-                        Text(appointment.beautician ?? "未分派")
+                        Text(appointment.beautician.isEmpty ? "未分派" : appointment.beautician)
                             .font(AppTheme.Typography.caption2)
                     }
                     .foregroundStyle(AppTheme.Colors.textSecondary)

@@ -73,7 +73,7 @@ class PDFExportService {
             let rowAttributes = [NSAttributedString.Key.font: rowFont]
             var currentY = 175.0
             
-            for (idx, customer) in customers.prefix(20).enumerated() {
+            for customer in customers.prefix(20) {
                 if currentY > 780 { // Page break check
                     context.beginPage()
                     currentY = 40.0
@@ -161,7 +161,7 @@ class PDFExportService {
             let rowAttributes = [NSAttributedString.Key.font: rowFont]
             var currentY = 175.0
             
-            for (idx, invoice) in invoices.prefix(20).enumerated() {
+            for invoice in invoices.prefix(20) {
                 if currentY > 780 {
                     context.beginPage()
                     currentY = 40.0

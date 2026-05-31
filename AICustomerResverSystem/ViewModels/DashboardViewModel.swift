@@ -39,7 +39,7 @@ class DashboardViewModel {
         do {
             // 1. Total Customers
             let customerDesc = FetchDescriptor<Customer>()
-            let allCustomers = (try? context.fetch(customerDesc)) ?? []
+            let allCustomers = try context.fetch(customerDesc)
             
             // Filter customers by selected branch (check if they have packages, appointments, or invoices associated with the branch)
             var filteredCustomers = allCustomers
@@ -56,7 +56,7 @@ class DashboardViewModel {
             
             // 2. Packages Sold & Remaining Sessions
             let packageDesc = FetchDescriptor<TreatmentPackage>()
-            let allPackages = (try? context.fetch(packageDesc)) ?? []
+            let allPackages = try context.fetch(packageDesc)
             
             var filteredPackages = allPackages
             if let selectedBranch = branch {
@@ -73,7 +73,7 @@ class DashboardViewModel {
             
             // 3. Appointments
             let appointmentDesc = FetchDescriptor<Appointment>()
-            let allAppointments = (try? context.fetch(appointmentDesc)) ?? []
+            let allAppointments = try context.fetch(appointmentDesc)
             
             var filteredAppointments = allAppointments
             if let selectedBranch = branch {
@@ -96,7 +96,7 @@ class DashboardViewModel {
             
             // 4. Invoices & Revenue
             let invoiceDesc = FetchDescriptor<Invoice>()
-            let allInvoices = (try? context.fetch(invoiceDesc)) ?? []
+            let allInvoices = try context.fetch(invoiceDesc)
             
             var filteredInvoices = allInvoices
             if let selectedBranch = branch {

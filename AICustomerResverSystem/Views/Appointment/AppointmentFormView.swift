@@ -120,15 +120,15 @@ struct AppointmentFormView: View {
             selectedCustomerID = appt.customer?.persistentModelID
             selectedBranchID = appt.branch?.persistentModelID
             treatmentItem = appt.treatmentItem
-            doctor = appt.doctor ?? ""
-            beautician = appt.beautician ?? ""
+            doctor = appt.doctor
+            beautician = appt.beautician
             appointmentDate = appt.appointmentDate
             startTime = appt.startTime
             endTime = appt.endTime
             if let stat = AppointmentStatus(rawValue: appt.status.rawValue) {
                 status = stat
             }
-            notes = appt.notes ?? ""
+            notes = appt.notes
         } else {
             if selectedBranchID == nil, let firstBranch = branches.first {
                 selectedBranchID = firstBranch.persistentModelID
