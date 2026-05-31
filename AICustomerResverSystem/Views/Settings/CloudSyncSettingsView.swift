@@ -167,6 +167,26 @@ struct CloudSyncSettingsView: View {
                 .foregroundStyle(AppTheme.Colors.textSecondary)
                 .lineSpacing(4)
             
+            if cloudKitService.accountStatus == .noAccount {
+                Button {
+                    openSystemSettings()
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.up.forward.app.fill")
+                        Text("前往 iOS 系統設定登入或註冊 Apple ID / iCloud")
+                    }
+                    .font(AppTheme.Typography.footnote)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(AppTheme.Colors.accentGradient)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.sm, style: .continuous))
+                    .shadow(color: AppTheme.Colors.accent.opacity(0.2), radius: 6, x: 0, y: 3)
+                }
+                .padding(.top, 4)
+            }
+            
             if let lastChecked = cloudKitService.lastChecked {
                 HStack {
                     Spacer()
@@ -285,6 +305,14 @@ struct CloudSyncSettingsView: View {
     }
     
     // MARK: - Helpers
+    
+    private func openSystemSettings() {
+        if let url = URL(string: "App-Prefs:root=CASTLE"), UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        } else if let url = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        }
+    }
     
     private var statusColor: Color {
         switch cloudKitService.accountStatus {
