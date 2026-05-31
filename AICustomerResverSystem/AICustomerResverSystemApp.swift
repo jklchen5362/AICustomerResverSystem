@@ -84,8 +84,8 @@ struct AICustomerResverSystemApp: App {
         
         if count == 0 {
             SampleDataService.loadSampleData(into: context)
-            appState.hasLoadedSampleData = true
         }
+        appState.hasLoadedSampleData = true
     }
 }
 
