@@ -202,7 +202,7 @@ struct AppointmentFormView: View {
             notes = appt.notes
             reminderLeadTime = appt.reminderLeadTime
             reminderSoundType = appt.reminderSoundType
-            reminderSpeechText = appt.reminderSpeechText
+            reminderSpeechText = appt.reminderSpeechText ?? ""
         } else {
             if selectedBranchID == nil, let firstBranch = branches.first {
                 selectedBranchID = firstBranch.persistentModelID

@@ -18,9 +18,9 @@ final class Appointment {
     var notes: String
     
     // Reminder Options
-    var reminderLeadTimeSeconds: Int
-    var reminderSoundTypeRaw: String
-    var reminderSpeechText: String
+    var reminderLeadTimeSeconds: Int?
+    var reminderSoundTypeRaw: String?
+    var reminderSpeechText: String?
     
     // Relationships
     var customer: Customer?
@@ -38,9 +38,9 @@ final class Appointment {
         endTime: Date = Date().addingTimeInterval(3600),
         status: AppointmentStatus = .confirmed,
         notes: String = "",
-        reminderLeadTimeSeconds: Int = 3600,
-        reminderSoundTypeRaw: String = "systemDefault",
-        reminderSpeechText: String = ""
+        reminderLeadTimeSeconds: Int? = 3600,
+        reminderSoundTypeRaw: String? = "systemDefault",
+        reminderSpeechText: String? = ""
     ) {
         self.appointmentID = appointmentID
         self.treatmentItem = treatmentItem
@@ -91,12 +91,12 @@ final class Appointment {
     
     // MARK: - Reminder Helpers
     var reminderLeadTime: ReminderLeadTime {
-        get { ReminderLeadTime(rawValue: reminderLeadTimeSeconds) ?? .oneHour }
+        get { ReminderLeadTime(rawValue: reminderLeadTimeSeconds ?? 3600) ?? .oneHour }
         set { reminderLeadTimeSeconds = newValue.rawValue }
     }
     
     var reminderSoundType: ReminderSoundType {
-        get { ReminderSoundType(rawValue: reminderSoundTypeRaw) ?? .systemDefault }
+        get { ReminderSoundType(rawValue: reminderSoundTypeRaw ?? "systemDefault") ?? .systemDefault }
         set { reminderSoundTypeRaw = newValue.rawValue }
     }
 }

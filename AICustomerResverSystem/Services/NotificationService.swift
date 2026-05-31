@@ -21,7 +21,7 @@ class NotificationService {
     
     func scheduleAppointmentReminder(for appointment: Appointment) {
         // 1. Check if reminders are disabled
-        let leadSeconds = Double(appointment.reminderLeadTimeSeconds)
+        let leadSeconds = Double(appointment.reminderLeadTimeSeconds ?? 3600)
         guard leadSeconds > 0 else { return }
         
         let content = UNMutableNotificationContent()
@@ -31,10 +31,11 @@ class NotificationService {
         let leadText = appointment.reminderLeadTime.displayName
         
         // 2. Configure body text (use custom TTS speech text if available, else generate default elegant message)
+        let speechText = appointment.reminderSpeechText ?? ""
         let defaultBody = "親愛的 \(clientName)，提醒您在 \(branchName) 的 \(appointment.treatmentItem) 預約將於 \(leadText) 後 (\(appointment.startTime.formattedTime)) 開始。期待您的光臨！"
-        let finalBody = appointment.reminderSpeechText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
+        let finalBody = speechText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
             ? defaultBody 
-            : appointment.reminderSpeechText
+            : speechText
         
         content.title = "📅 專屬預約提醒"
         content.body = finalBody
