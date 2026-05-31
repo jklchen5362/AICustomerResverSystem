@@ -14,6 +14,7 @@ struct DashboardView: View {
     
     @Query(sort: \Branch.name) private var branches: [Branch]
     @State private var selectedBranchID: PersistentIdentifier? = nil
+    @State private var showCustomerDetailSheet = false
     
     private var selectedBranchName: String {
         if let branchID = selectedBranchID,
@@ -39,13 +40,18 @@ struct DashboardView: View {
                     
                     // Stats 2x2 grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: AppTheme.Spacing.md) {
-                        StatCard(
-                            title: "客戶總數",
-                            value: "\(viewModel.totalCustomers)",
-                            icon: "person.2.fill",
-                            color: AppTheme.Colors.accent,
-                            trend: 8.4
-                        )
+                        Button {
+                            showCustomerDetailSheet = true
+                        } label: {
+                            StatCard(
+                                title: "客戶總數",
+                                value: "\(viewModel.totalCustomers)",
+                                icon: "person.2.fill",
+                                color: AppTheme.Colors.accent,
+                                trend: 8.4
+                            )
+                        }
+                        .buttonStyle(.plain)
                         
                         StatCard(
                             title: "療程銷量",
@@ -250,6 +256,12 @@ struct DashboardView: View {
             .onChange(of: appointments.map { "\($0.persistentModelID)-\($0.status.rawValue)-\($0.appointmentDate.timeIntervalSince1970)" }) { _, _ in refreshData() }
             .onChange(of: packages.map { "\($0.persistentModelID)-\($0.remainingSessions)" }) { _, _ in refreshData() }
             .onChange(of: invoices.map { "\($0.persistentModelID)-\($0.amount)" }) { _, _ in refreshData() }
+        }
+        .sheet(isPresented: $showCustomerDetailSheet) {
+            DashboardCustomerListView(
+                selectedBranchID: selectedBranchID,
+                selectedBranchName: selectedBranchName
+            )
         }
     }
 }
