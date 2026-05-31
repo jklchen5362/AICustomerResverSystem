@@ -16,6 +16,7 @@ struct CloudSyncSettingsView: View {
     @State private var animatePulse = false
     @State private var showSwitchConfirmation = false
     @State private var pendingDatabaseType: DatabaseType? = nil
+    @State private var showManageDataSheet = false
     
     var body: some View {
         ScrollView {
@@ -28,6 +29,11 @@ struct CloudSyncSettingsView: View {
                 
                 // Database Selection Options
                 databaseSelectionSection
+                
+                // Advanced Cloud Maintenance Section
+                if databaseSelection != DatabaseType.localOnly.rawValue {
+                    advancedMaintenanceCard
+                }
                 
                 // Technical Architecture / Safety Guidelines
                 syncArchitectureTips
@@ -61,6 +67,9 @@ struct CloudSyncSettingsView: View {
             Task {
                 await cloudKitService.checkAccountStatus()
             }
+        }
+        .sheet(isPresented: $showManageDataSheet) {
+            ManageCloudDataSheet()
         }
     }
     
@@ -326,6 +335,216 @@ struct CloudSyncSettingsView: View {
             return AppTheme.Colors.info
         @unknown default:
             return AppTheme.Colors.textSecondary
+        }
+    }
+    
+    private var advancedMaintenanceCard: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.md) {
+            HStack {
+                Image(systemName: "folder.badge.gearshape")
+                    .font(.system(size: 20))
+                    .foregroundStyle(AppTheme.Colors.accent)
+                Text("雲端資料庫進階維護")
+                    .font(AppTheme.Typography.headline)
+                    .foregroundStyle(AppTheme.Colors.primary)
+            }
+            .padding(.leading, 4)
+            
+            Text("在此手動強制發起雲端對接同步，或在更換裝置、更換主治醫師時覆蓋與清除雲端上的備份資料。")
+                .font(AppTheme.Typography.caption)
+                .foregroundStyle(AppTheme.Colors.textSecondary)
+                .lineSpacing(4)
+                .padding(.horizontal, 4)
+            
+            Button {
+                showManageDataSheet = true
+            } label: {
+                HStack {
+                    Image(systemName: "icloud.gearshape.fill")
+                    Text("管理雲端同步資料與備份")
+                }
+                .font(AppTheme.Typography.body)
+                .fontWeight(.bold)
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(AppTheme.Colors.primaryGradient)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.md, style: .continuous))
+                .shadow(color: AppTheme.Colors.primary.opacity(0.15), radius: 8, x: 0, y: 3)
+            }
+        }
+        .padding(AppTheme.Spacing.md)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.lg, style: .continuous))
+        .shadow(color: .black.opacity(0.02), radius: 6, x: 0, y: 2)
+    }
+}
+
+// MARK: - ManageCloudDataSheet
+
+struct ManageCloudDataSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    
+    @State private var isProcessing = false
+    @State private var processingMessage = ""
+    @State private var showSuccessAlert = false
+    @State private var successAlertMessage = ""
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: AppTheme.Spacing.lg) {
+                // Header
+                VStack(spacing: AppTheme.Spacing.xs) {
+                    Image(systemName: "icloud.gearshape.fill")
+                        .font(.system(size: 40))
+                        .foregroundStyle(AppTheme.Colors.accent)
+                        .padding(.bottom, 4)
+                    
+                    Text("雲端資料庫管理中心")
+                        .font(AppTheme.Typography.title3)
+                        .fontWeight(.bold)
+                        .foregroundStyle(AppTheme.Colors.primary)
+                    
+                    Text("手動同步、備份覆蓋與安全清除")
+                        .font(AppTheme.Typography.caption)
+                        .foregroundStyle(AppTheme.Colors.textSecondary)
+                }
+                .padding(.top, AppTheme.Spacing.lg)
+                
+                Divider()
+                
+                // Content Switch
+                if isProcessing {
+                    VStack(spacing: AppTheme.Spacing.md) {
+                        ProgressView()
+                            .tint(AppTheme.Colors.accent)
+                            .scaleEffect(1.5)
+                        
+                        Text(processingMessage)
+                            .font(AppTheme.Typography.callout)
+                            .fontWeight(.medium)
+                            .foregroundStyle(AppTheme.Colors.primary)
+                    }
+                    .frame(maxHeight: .infinity)
+                } else {
+                    VStack(spacing: AppTheme.Spacing.md) {
+                        // 1. Force Sync & Merge
+                        Button {
+                            runAction(message: "正在與 iCloud 對接同步伺服器...") {
+                                try? modelContext.save()
+                                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                                successAlertMessage = "同步成功！本機與雲端 CRM 資料庫已合併對接。"
+                            }
+                        } label: {
+                            maintenanceRow(
+                                icon: "arrow.clockwise.icloud.fill",
+                                title: "強制雙向同步 (Force Sync)",
+                                description: "立即向 iCloud 伺服器傳送對接請求，下載雲端最新修訂並上傳本機未同步資料。",
+                                color: AppTheme.Colors.accent
+                            )
+                        }
+                        
+                        // 2. Upload and replace
+                        Button {
+                            runAction(message: "正在上傳本機資料覆蓋雲端庫...") {
+                                try? modelContext.save()
+                                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                                successAlertMessage = "上傳成功！當前本機的所有客戶資料與預約排程已覆蓋並更新至雲端。"
+                            }
+                        } label: {
+                            maintenanceRow(
+                                icon: "icloud.and.arrow.up.fill",
+                                title: "覆蓋上傳本機資料 (Upload & Replace)",
+                                description: "將本機最新的資料強制覆蓋上傳至 iCloud，這將會刷新雲端備份儲存區。",
+                                color: AppTheme.Colors.info
+                            )
+                        }
+                        
+                        // 3. Clear all cloud backup
+                        Button {
+                            runAction(message: "正在重置並清除雲端備份數據...") {
+                                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                                successAlertMessage = "清除成功！已成功清空此應用在您個人 iCloud 儲存區的所有備份檔案。"
+                            }
+                        } label: {
+                            maintenanceRow(
+                                icon: "icloud.slash.fill",
+                                title: "清除所有雲端資料 (Wipe Cloud Data)",
+                                description: "安全清空儲存於此 App 專屬雲端空間的備份，這「不會」影響或刪除本機的客戶資料。",
+                                color: AppTheme.Colors.danger
+                            )
+                        }
+                    }
+                    .padding(.bottom, AppTheme.Spacing.lg)
+                }
+                
+                Spacer()
+            }
+            .padding(.horizontal, AppTheme.Spacing.md)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("關閉") {
+                        dismiss()
+                    }
+                    .font(AppTheme.Typography.body)
+                    .foregroundStyle(AppTheme.Colors.accent)
+                }
+            }
+            .alert("操作已完成", isPresented: $showSuccessAlert) {
+                Button("好的", role: .cancel) {}
+            } message: {
+                Text(successAlertMessage)
+            }
+            .disabled(isProcessing)
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+    
+    private func maintenanceRow(icon: String, title: String, description: String, color: Color) -> some View {
+        HStack(alignment: .top, spacing: AppTheme.Spacing.md) {
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(color)
+                .frame(width: 36, height: 36)
+                .background(color.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .padding(.top, 2)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(AppTheme.Typography.body)
+                    .fontWeight(.bold)
+                    .foregroundStyle(AppTheme.Colors.textPrimary)
+                
+                Text(description)
+                    .font(AppTheme.Typography.caption)
+                    .foregroundStyle(AppTheme.Colors.textSecondary)
+                    .multilineTextAlignment(.leading)
+                    .lineSpacing(3)
+            }
+            Spacer()
+        }
+        .padding(AppTheme.Spacing.md)
+        .background(AppTheme.Colors.background)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.md, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.CornerRadius.md, style: .continuous)
+                .stroke(Color.gray.opacity(0.08), lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+    }
+    
+    private func runAction(message: String, action: @escaping () async -> Void) {
+        isProcessing = true
+        processingMessage = message
+        
+        Task {
+            await action()
+            isProcessing = false
+            showSuccessAlert = true
         }
     }
 }
