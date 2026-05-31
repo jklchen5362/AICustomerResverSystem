@@ -8,6 +8,8 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(AppState.self) private var appState
     
+    @AppStorage("databaseSelection") private var databaseSelection: String = DatabaseType.localOnly.rawValue
+    
     @State private var notificationsEnabled = true
     @State private var faceIDEnabled = false
     @State private var selectedThemeIndex = 0
@@ -69,6 +71,25 @@ struct SettingsView: View {
                 Picker(selection: $selectedThemeIndex, label: Label("介面外觀 Theme", systemImage: "paintbrush.fill")) {
                     Text("智能白皙 (預設)").tag(0)
                     Text("奢華曜黑 (暗黑)").tag(1)
+                }
+            }
+            
+            // Cloud Sync
+            Section("雲端備份與自動同步 Cloud Sync") {
+                NavigationLink(destination: CloudSyncSettingsView()) {
+                    HStack {
+                        Label("雲端資料庫同步設定", systemImage: "icloud.and.arrow.up.fill")
+                        Spacer()
+                        
+                        let type = DatabaseType(rawValue: databaseSelection) ?? .localOnly
+                        Text(type.title)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(type == .localOnly ? AppTheme.Colors.textSecondary : AppTheme.Colors.accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(type == .localOnly ? Color.gray.opacity(0.12) : AppTheme.Colors.accent.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
                 }
             }
             

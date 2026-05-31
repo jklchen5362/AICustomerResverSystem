@@ -1,4 +1,4 @@
-
+//
 //  AICustomerResverSystemApp.swift
 //  AICustomerResverSystem
 //
@@ -13,32 +13,21 @@ struct AICustomerResverSystemApp: App {
     @State private var appState = AppState()
     private let notificationDelegate = NotificationDelegate()
     
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Customer.self,
-            TreatmentPackage.self,
-            Appointment.self,
-            Branch.self,
-            ConsumptionRecord.self,
-            Invoice.self,
-            AppNotification.self,
-            UserAccount.self,
-            ChatMessage.self,
-        ])
-        let modelConfiguration = ModelConfiguration(
-            schema: schema,
-            isStoredInMemoryOnly: false
-        )
-
-        do {
-            return try ModelContainer(
-                for: schema,
-                configurations: [modelConfiguration]
-            )
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+    // Bind to the AppStorage selection to observe changes
+    @AppStorage("databaseSelection") private var databaseSelection: String = DatabaseType.localOnly.rawValue
+    
+    // Dynamic hot-swappable model container
+    @State private var modelContainer: ModelContainer
+    
+    init() {
+        // Read the initial selection directly from UserDefaults to set up the container
+        let initialSelection = UserDefaults.standard.string(forKey: "databaseSelection") ?? DatabaseType.localOnly.rawValue
+        let initialType = DatabaseType(rawValue: initialSelection) ?? .localOnly
+        
+        // Setup initial container matching preference
+        let container = ModelContainerFactory.createContainer(for: initialType)
+        _modelContainer = State(initialValue: container)
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -54,8 +43,27 @@ struct AICustomerResverSystemApp: App {
                         _ = await NotificationService.shared.requestPermission()
                     }
                 }
+                .onChange(of: databaseSelection) { oldValue, newValue in
+                    let type = DatabaseType(rawValue: newValue) ?? .localOnly
+                    print("[App] Database selection changed from \(oldValue) to \(newValue). Swapping SwiftData Container...")
+                    
+                    // Instantiate new container matching selection
+                    let newContainer = ModelContainerFactory.createContainer(for: type)
+                    
+                    // Update state to propagate down to environment
+                    self.modelContainer = newContainer
+                    
+                    // Automatically seed sample data if container is fresh and empty
+                    let context = newContainer.mainContext
+                    let descriptor = FetchDescriptor<Customer>()
+                    let count = (try? context.fetchCount(descriptor)) ?? 0
+                    if count == 0 {
+                        print("[App] Hot-swapped container is empty. Seeding sample data...")
+                        SampleDataService.loadSampleData(into: context)
+                    }
+                }
         }
-        .modelContainer(sharedModelContainer)
+        .modelContainer(modelContainer)
     }
     
     private func setupAppearance() {
@@ -76,7 +84,7 @@ struct AICustomerResverSystemApp: App {
     @MainActor
     private func loadSampleDataIfNeeded() {
         guard !appState.hasLoadedSampleData else { return }
-        let context = sharedModelContainer.mainContext
+        let context = modelContainer.mainContext
         
         // Check if data already exists
         let descriptor = FetchDescriptor<Customer>()

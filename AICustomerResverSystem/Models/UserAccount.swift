@@ -7,7 +7,7 @@ import SwiftData
 
 @Model
 final class UserAccount {
-    @Attribute(.unique) var userID: String
+    var userID: String
     var username: String
     var displayName: String
     var email: String

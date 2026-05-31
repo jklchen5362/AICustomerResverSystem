@@ -7,7 +7,7 @@ import SwiftData
 
 @Model
 final class AppNotification {
-    @Attribute(.unique) var notificationID: String
+    var notificationID: String
     var type: NotificationType
     var title: String
     var message: String

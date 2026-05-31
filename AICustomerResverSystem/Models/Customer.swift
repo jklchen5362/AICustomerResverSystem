@@ -7,7 +7,7 @@ import SwiftData
 
 @Model
 final class Customer {
-    @Attribute(.unique) var customerID: String
+    var customerID: String
     var fullName: String
     var gender: Gender
     var birthday: Date?

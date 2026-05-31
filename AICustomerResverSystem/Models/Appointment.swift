@@ -7,7 +7,7 @@ import SwiftData
 
 @Model
 final class Appointment {
-    @Attribute(.unique) var appointmentID: String
+    var appointmentID: String
     var treatmentItem: String
     var doctor: String
     var beautician: String

@@ -7,7 +7,7 @@ import SwiftData
 
 @Model
 final class TreatmentPackage {
-    @Attribute(.unique) var packageID: String
+    var packageID: String
     var treatmentName: String
     var totalSessions: Int
     var sessionsUsed: Int

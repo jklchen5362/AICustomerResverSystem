@@ -7,7 +7,7 @@ import SwiftData
 
 @Model
 final class ChatMessage {
-    @Attribute(.unique) var messageID: String
+    var messageID: String
     var content: String
     var isFromUser: Bool
     var timestamp: Date

@@ -7,7 +7,7 @@ import SwiftData
 
 @Model
 final class Invoice {
-    @Attribute(.unique) var invoiceNumber: String
+    var invoiceNumber: String
     var packageName: String
     var amount: Double
     var paymentMethod: PaymentMethod

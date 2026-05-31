@@ -7,7 +7,7 @@ import SwiftData
 
 @Model
 final class ConsumptionRecord {
-    @Attribute(.unique) var recordID: String
+    var recordID: String
     var date: Date
     var treatmentName: String
     var sessionsConsumed: Int

@@ -7,7 +7,7 @@ import SwiftData
 
 @Model
 final class Branch {
-    @Attribute(.unique) var branchID: String
+    var branchID: String
     var name: String
     var address: String
     var phone: String
