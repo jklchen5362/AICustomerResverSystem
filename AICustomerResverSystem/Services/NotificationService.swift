@@ -20,26 +20,65 @@ class NotificationService {
     }
     
     func scheduleAppointmentReminder(for appointment: Appointment) {
+        // 1. Check if reminders are disabled
+        let leadSeconds = Double(appointment.reminderLeadTimeSeconds)
+        guard leadSeconds > 0 else { return }
+        
         let content = UNMutableNotificationContent()
-        content.title = "📅 明日預約提醒"
         
         let clientName = appointment.customer?.fullName ?? "客戶"
         let branchName = appointment.branch?.name ?? "台北總店"
-        content.body = "親愛的 \(clientName)，提醒您明日有登記 \(appointment.treatmentItem) 療程於 \(branchName) \(appointment.startTime.formattedTime)。期待您的光臨！"
-        content.sound = .default
+        let leadText = appointment.reminderLeadTime.displayName
         
-        // Trigger 24 hours before appointment
-        let triggerDate = appointment.startTime.addingTimeInterval(-86400)
-        let leadTime = triggerDate.timeIntervalSinceNow
+        // 2. Configure body text (use custom TTS speech text if available, else generate default elegant message)
+        let defaultBody = "親愛的 \(clientName)，提醒您在 \(branchName) 的 \(appointment.treatmentItem) 預約將於 \(leadText) 後 (\(appointment.startTime.formattedTime)) 開始。期待您的光臨！"
+        let finalBody = appointment.reminderSpeechText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty 
+            ? defaultBody 
+            : appointment.reminderSpeechText
         
-        guard leadTime > 0 else { return }
+        content.title = "📅 專屬預約提醒"
+        content.body = finalBody
+        
+        // 3. Configure Sound type
+        switch appointment.reminderSoundType {
+        case .systemDefault:
+            content.sound = .default
+        case .classicChime:
+            // Custom sound file. If chime.caf is missing from bundle, iOS automatically falls back to system default.
+            content.sound = UNNotificationSound(named: UNNotificationSoundName("chime.caf"))
+        case .voiceSpeech:
+            content.sound = .default
+            // Embed TTS payload into userInfo
+            content.userInfo = [
+                "speechText": finalBody,
+                "speakOnOpen": true,
+                "appointmentID": appointment.appointmentID
+            ]
+        }
+        
+        // 4. Calculate exact trigger time
+        let triggerDate = appointment.startTime.addingTimeInterval(-leadSeconds)
+        var leadTime = triggerDate.timeIntervalSinceNow
+        
+        if leadTime <= 0 {
+            // If the calculated trigger time has passed, but the appointment itself is in the future,
+            // fire the notification in 2 seconds so the user can test the TTS/chime immediately!
+            if appointment.startTime > Date() {
+                leadTime = 2.0
+            } else {
+                return
+            }
+        }
+        
+        // Cancel any existing reminder for this appointment first
+        cancelNotification(id: "appt-\(appointment.appointmentID)")
         
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: leadTime, repeats: false)
         let request = UNNotificationRequest(identifier: "appt-\(appointment.appointmentID)", content: content, trigger: trigger)
         
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("Failed to schedule appointment local notification: \(error)")
+                print("Failed to schedule custom appointment local notification: \(error)")
             }
         }
     }

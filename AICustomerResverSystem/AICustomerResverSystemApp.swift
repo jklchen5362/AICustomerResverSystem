@@ -11,6 +11,7 @@ import SwiftData
 @main
 struct AICustomerResverSystemApp: App {
     @State private var appState = AppState()
+    private let notificationDelegate = NotificationDelegate()
     
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -45,7 +46,13 @@ struct AICustomerResverSystemApp: App {
                 .environment(appState)
                 .onAppear {
                     setupAppearance()
+                    UNUserNotificationCenter.current().delegate = notificationDelegate
                     loadSampleDataIfNeeded()
+                    
+                    // Proactively request local notification permissions
+                    Task {
+                        _ = await NotificationService.shared.requestPermission()
+                    }
                 }
         }
         .modelContainer(sharedModelContainer)
@@ -79,5 +86,37 @@ struct AICustomerResverSystemApp: App {
             SampleDataService.loadSampleData(into: context)
             appState.hasLoadedSampleData = true
         }
+    }
+}
+
+// MARK: - NotificationDelegate
+
+class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        let userInfo = notification.request.content.userInfo
+        if let speechText = userInfo["speechText"] as? String {
+            DispatchQueue.main.async {
+                SpeechService.shared.speak(speechText)
+            }
+        }
+        completionHandler([.banner, .list, .sound])
+    }
+    
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+        if let speechText = userInfo["speechText"] as? String {
+            DispatchQueue.main.async {
+                SpeechService.shared.speak(speechText)
+            }
+        }
+        completionHandler()
     }
 }

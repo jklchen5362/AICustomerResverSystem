@@ -25,6 +25,11 @@ struct AppointmentFormView: View {
     @State private var status: AppointmentStatus = .confirmed
     @State private var notes = ""
     
+    // Reminder options
+    @State private var reminderLeadTime: ReminderLeadTime = .oneHour
+    @State private var reminderSoundType: ReminderSoundType = .systemDefault
+    @State private var reminderSpeechText = ""
+    
     // Validation alert
     @State private var alertTitle = ""
     @State private var alertMessage = ""
@@ -32,6 +37,13 @@ struct AppointmentFormView: View {
     
     var isEditMode: Bool {
         appointment != nil
+    }
+    
+    private func generateDefaultSpeechText() {
+        let clientName = customers.first(where: { $0.persistentModelID == selectedCustomerID })?.fullName ?? "貴賓"
+        let branchName = branches.first(where: { $0.persistentModelID == selectedBranchID })?.name ?? "分店"
+        let leadText = reminderLeadTime.displayName
+        reminderSpeechText = "親愛的 \(clientName) 您好，提醒您預訂在 \(branchName) 的 \(treatmentItem.isEmpty ? "療程" : treatmentItem) 將於\(leadText)後開始，我們非常期待與您見面。"
     }
     
     var body: some View {
@@ -45,6 +57,7 @@ struct AppointmentFormView: View {
                         }
                     }
                     .disabled(isEditMode) // Lock customer on edit
+                    .onChange(of: selectedCustomerID) { _, _ in generateDefaultSpeechText() }
                     
                     Picker("預約分店 Branch *", selection: $selectedBranchID) {
                         Text("請選擇分店").tag(nil as PersistentIdentifier?)
@@ -52,11 +65,13 @@ struct AppointmentFormView: View {
                             Text(branch.name).tag(branch.persistentModelID as PersistentIdentifier?)
                         }
                     }
+                    .onChange(of: selectedBranchID) { _, _ in generateDefaultSpeechText() }
                 }
                 
                 Section("療程與服務人員 Treatment & Staff") {
                     TextField("療程項目 Treatment *", text: $treatmentItem)
                         .textInputAutocapitalization(.words)
+                        .onChange(of: treatmentItem) { _, _ in generateDefaultSpeechText() }
                     
                     TextField("主治醫師 Doctor", text: $doctor)
                         .textInputAutocapitalization(.words)
@@ -77,6 +92,59 @@ struct AppointmentFormView: View {
                             ForEach(AppointmentStatus.allCases) { stat in
                                 Text(stat.displayName).tag(stat)
                             }
+                        }
+                    }
+                }
+                
+                Section("提醒與語音設定 Reminders & Voice") {
+                    Picker("提醒時間 Reminder Offset", selection: $reminderLeadTime) {
+                        ForEach(ReminderLeadTime.allCases) { time in
+                            Text(time.displayName).tag(time)
+                        }
+                    }
+                    .onChange(of: reminderLeadTime) { _, _ in generateDefaultSpeechText() }
+                    
+                    if reminderLeadTime != .none {
+                        Picker("提示音效 Ringtone Style", selection: $reminderSoundType) {
+                            ForEach(ReminderSoundType.allCases) { type in
+                                Text(type.displayName).tag(type)
+                            }
+                        }
+                        
+                        if reminderSoundType == .voiceSpeech {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("語音唸讀文字 Speech Text")
+                                    .font(AppTheme.Typography.caption)
+                                    .foregroundStyle(AppTheme.Colors.textSecondary)
+                                
+                                HStack(spacing: 8) {
+                                    TextField("請輸入要唸讀的提醒內容", text: $reminderSpeechText)
+                                        .textFieldStyle(.roundedBorder)
+                                    
+                                    Button {
+                                        if SpeechService.shared.isPlaying {
+                                            SpeechService.shared.stop()
+                                        } else {
+                                            SpeechService.shared.speak(reminderSpeechText)
+                                        }
+                                    } label: {
+                                        Image(systemName: SpeechService.shared.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                                            .font(.system(size: 24))
+                                            .foregroundStyle(AppTheme.Colors.accent)
+                                    }
+                                }
+                                
+                                Button(action: {
+                                    generateDefaultSpeechText()
+                                }) {
+                                    Label("自動生成高質感模板", systemImage: "sparkles")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(AppTheme.Colors.accent)
+                                }
+                                .buttonStyle(.borderless)
+                                .padding(.top, 2)
+                            }
+                            .padding(.vertical, 4)
                         }
                     }
                 }
@@ -112,6 +180,9 @@ struct AppointmentFormView: View {
             .onAppear {
                 populateForm()
             }
+            .onDisappear {
+                SpeechService.shared.stop()
+            }
         }
     }
     
@@ -129,10 +200,14 @@ struct AppointmentFormView: View {
                 status = stat
             }
             notes = appt.notes
+            reminderLeadTime = appt.reminderLeadTime
+            reminderSoundType = appt.reminderSoundType
+            reminderSpeechText = appt.reminderSpeechText
         } else {
             if selectedBranchID == nil, let firstBranch = branches.first {
                 selectedBranchID = firstBranch.persistentModelID
             }
+            generateDefaultSpeechText()
         }
     }
     
@@ -202,6 +277,11 @@ struct AppointmentFormView: View {
             appt.endTime = finalEndTime
             appt.status = status
             appt.notes = notes
+            appt.reminderLeadTimeSeconds = reminderLeadTime.rawValue
+            appt.reminderSoundTypeRaw = reminderSoundType.rawValue
+            appt.reminderSpeechText = reminderSpeechText
+            
+            NotificationService.shared.scheduleAppointmentReminder(for: appt)
         } else {
             // Create new appointment
             let newAppt = Appointment(
@@ -212,12 +292,17 @@ struct AppointmentFormView: View {
                 startTime: finalStartTime,
                 endTime: finalEndTime,
                 status: .confirmed,
-                notes: notes
+                notes: notes,
+                reminderLeadTimeSeconds: reminderLeadTime.rawValue,
+                reminderSoundTypeRaw: reminderSoundType.rawValue,
+                reminderSpeechText: reminderSpeechText
             )
             newAppt.customer = customer
             newAppt.branch = branch
             
             modelContext.insert(newAppt)
+            
+            NotificationService.shared.scheduleAppointmentReminder(for: newAppt)
             
             // Create notification for new booking
             let notif = AppNotification(
