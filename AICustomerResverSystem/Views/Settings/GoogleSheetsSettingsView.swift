@@ -16,6 +16,7 @@ struct GoogleSheetsSettingsView: View {
     
     // UI state
     @State private var isSyncing = false
+    @State private var isDownloading = false
     @State private var isFetchingFiles = false
     @State private var driveFiles: [GoogleDriveFile] = []
     @State private var showFileBrowser = false
@@ -71,25 +72,6 @@ struct GoogleSheetsSettingsView: View {
                     }
                     
                     Spacer()
-                    
-                    if authService.isAuthorized && !appState.googleSpreadsheetID.isEmpty {
-                        Button {
-                            triggerSync()
-                        } label: {
-                            if isSyncing {
-                                ProgressView()
-                                    .tint(.white)
-                            } else {
-                                Image(systemName: "arrow.trianglehead.2.counterclockwise.rotate.90")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                        .frame(width: 36, height: 36)
-                        .background(AppTheme.Colors.primaryGradient)
-                        .clipShape(Circle())
-                        .disabled(isSyncing)
-                    }
                 }
                 .padding(.vertical, 6)
             }
@@ -182,7 +164,7 @@ struct GoogleSheetsSettingsView: View {
             
             // Synchronization Status
             if authService.isAuthorized && !appState.googleSpreadsheetID.isEmpty {
-                Section("資料對接同步狀態 (Sync Database Info)") {
+                Section("資料對接同步與還原 (Sync & Restore)") {
                     HStack {
                         Text("當前連接 ID")
                         Spacer()
@@ -192,7 +174,7 @@ struct GoogleSheetsSettingsView: View {
                     }
                     
                     HStack {
-                        Text("上次鏡像同步時間")
+                        Text("上次同步時間")
                         Spacer()
                         if appState.googleLastSyncTime > 0 {
                             let date = Date(timeIntervalSince1970: appState.googleLastSyncTime)
@@ -205,6 +187,36 @@ struct GoogleSheetsSettingsView: View {
                                 .foregroundStyle(AppTheme.Colors.warning)
                         }
                     }
+                    
+                    Button {
+                        triggerSync()
+                    } label: {
+                        HStack {
+                            Label("📤 上傳本機資料至雲端 (Upload & Overwrite)", systemImage: "arrow.up.doc.fill")
+                            Spacer()
+                            if isSyncing {
+                                ProgressView()
+                                    .tint(AppTheme.Colors.accent)
+                            }
+                        }
+                    }
+                    .disabled(isSyncing || isDownloading)
+                    .foregroundStyle(AppTheme.Colors.primary)
+                    
+                    Button {
+                        triggerDownload()
+                    } label: {
+                        HStack {
+                            Label("📥 從雲端下載並還原 (Download & Restore)", systemImage: "arrow.down.doc.fill")
+                            Spacer()
+                            if isDownloading {
+                                ProgressView()
+                                    .tint(AppTheme.Colors.warning)
+                            }
+                        }
+                    }
+                    .disabled(isSyncing || isDownloading)
+                    .foregroundStyle(AppTheme.Colors.warning)
                 }
             }
             
@@ -403,6 +415,25 @@ struct GoogleSheetsSettingsView: View {
             } catch {
                 isSyncing = false
                 alertTitle = "同步失敗"
+                alertMessage = error.localizedDescription
+                showAlert = true
+            }
+        }
+    }
+    
+    private func triggerDownload() {
+        isDownloading = true
+        Task {
+            do {
+                try await syncEngine.downloadAllData(context: modelContext, spreadsheetID: appState.googleSpreadsheetID)
+                isDownloading = false
+                appState.googleLastSyncTime = Date().timeIntervalSince1970
+                alertTitle = "還原成功"
+                alertMessage = "成功從雲端試算表下載並還原所有資料至本機資料庫！"
+                showAlert = true
+            } catch {
+                isDownloading = false
+                alertTitle = "還原失敗"
                 alertMessage = error.localizedDescription
                 showAlert = true
             }

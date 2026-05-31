@@ -205,6 +205,17 @@ class GoogleSheetsService {
         
         print("[GoogleSheetsService] Overwrote '\(sheetTitle)' with \(rows.count) rows of data.")
     }
+    
+    func fetchWorksheetValues(spreadsheetID: String, range: String) async throws -> [[String]] {
+        let encodedRange = range.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)!
+        let url = URL(string: "https://sheets.googleapis.com/v4/spreadsheets/\(spreadsheetID)/values/\(encodedRange)")!
+        
+        let data = try await performRequest(url: url, method: "GET")
+        let response = try JSONDecoder().decode(GoogleSheetValuesResponse.self, from: data)
+        
+        guard let valuesMatrix = response.values else { return [] }
+        return valuesMatrix.map { row in row.map { $0.stringValue } }
+    }
 }
 
 // MARK: - API Decodable Decoders
@@ -224,4 +235,29 @@ private struct GoogleSheetWrapper: Codable {
 
 private struct GoogleSheetProperties: Codable {
     let title: String
+}
+
+private struct GoogleSheetValuesResponse: Codable {
+    let range: String
+    let majorDimension: String
+    let values: [[GoogleCell]]?
+}
+
+struct GoogleCell: Codable {
+    let stringValue: String
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let s = try? container.decode(String.self) {
+            self.stringValue = s
+        } else if let i = try? container.decode(Int.self) {
+            self.stringValue = String(i)
+        } else if let d = try? container.decode(Double.self) {
+            self.stringValue = String(d)
+        } else if let b = try? container.decode(Bool.self) {
+            self.stringValue = String(b)
+        } else {
+            self.stringValue = ""
+        }
+    }
 }

@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		AEBF5FF22FCBEB71000502A6 /* AICustomerResverSystem.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AICustomerResverSystem.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AEBF5FF22FCBEB71000502A6 /* 醫美隨身特助.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "醫美隨身特助.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -40,7 +40,7 @@
 		AEBF5FF32FCBEB71000502A6 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				AEBF5FF22FCBEB71000502A6 /* AICustomerResverSystem.app */,
+				AEBF5FF22FCBEB71000502A6 /* 醫美隨身特助.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		AEBF5FF12FCBEB71000502A6 /* AICustomerResverSystem */ = {
+		AEBF5FF12FCBEB71000502A6 /* 醫美隨身特助 */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = AEBF5FFF2FCBEB71000502A6 /* Build configuration list for PBXNativeTarget "AICustomerResverSystem" */;
+			buildConfigurationList = AEBF5FFF2FCBEB71000502A6 /* Build configuration list for PBXNativeTarget "醫美隨身特助" */;
 			buildPhases = (
 				AEBF5FEE2FCBEB71000502A6 /* Sources */,
 				AEBF5FEF2FCBEB71000502A6 /* Frameworks */,
@@ -63,11 +63,11 @@
 			fileSystemSynchronizedGroups = (
 				AEBF5FF42FCBEB71000502A6 /* AICustomerResverSystem */,
 			);
-			name = AICustomerResverSystem;
+			name = "醫美隨身特助";
 			packageProductDependencies = (
 			);
 			productName = AICustomerResverSystem;
-			productReference = AEBF5FF22FCBEB71000502A6 /* AICustomerResverSystem.app */;
+			productReference = AEBF5FF22FCBEB71000502A6 /* 醫美隨身特助.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -85,7 +85,7 @@
 					};
 				};
 			};
-			buildConfigurationList = AEBF5FED2FCBEB71000502A6 /* Build configuration list for PBXProject "AICustomerResverSystem" */;
+			buildConfigurationList = AEBF5FED2FCBEB71000502A6 /* Build configuration list for PBXProject "醫美隨身特助" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -99,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				AEBF5FF12FCBEB71000502A6 /* AICustomerResverSystem */,
+				AEBF5FF12FCBEB71000502A6 /* 醫美隨身特助 */,
 			);
 		};
 /* End PBXProject section */
@@ -315,7 +315,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		AEBF5FED2FCBEB71000502A6 /* Build configuration list for PBXProject "AICustomerResverSystem" */ = {
+		AEBF5FED2FCBEB71000502A6 /* Build configuration list for PBXProject "醫美隨身特助" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AEBF5FFD2FCBEB71000502A6 /* Debug */,
@@ -324,7 +324,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		AEBF5FFF2FCBEB71000502A6 /* Build configuration list for PBXNativeTarget "AICustomerResverSystem" */ = {
+		AEBF5FFF2FCBEB71000502A6 /* Build configuration list for PBXNativeTarget "醫美隨身特助" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				AEBF60002FCBEB71000502A6 /* Debug */,
