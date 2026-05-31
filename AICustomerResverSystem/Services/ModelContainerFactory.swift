@@ -22,9 +22,19 @@ struct ModelContainerFactory {
     
     @MainActor
     static func createContainer(for type: DatabaseType) -> ModelContainer {
+        // Entitlement Safety Filter: If iCloud capability is missing, force local-only storage scope
+        // to prevent persistent store loading failure / crashes.
+        let resolvedType: DatabaseType
+        if type != .localOnly && FileManager.default.url(forUbiquityContainerIdentifier: nil) == nil {
+            print("[SwiftData] Warning: iCloud entitlements are missing or iCloud is disabled. Forcing Local Only database storage.")
+            resolvedType = .localOnly
+        } else {
+            resolvedType = type
+        }
+        
         let configuration: ModelConfiguration
         
-        switch type {
+        switch resolvedType {
         case .localOnly:
             configuration = ModelConfiguration(
                 schema: schema,

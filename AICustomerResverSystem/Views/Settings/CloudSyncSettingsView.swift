@@ -393,6 +393,9 @@ struct ManageCloudDataSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     
+    // Bind to the live observable CloudKitService singleton
+    @State private var cloudKitService = CloudKitService.shared
+    
     @State private var isProcessing = false
     @State private var processingMessage = ""
     @State private var showSuccessAlert = false
@@ -438,6 +441,11 @@ struct ManageCloudDataSheet: View {
                     VStack(spacing: AppTheme.Spacing.md) {
                         // 1. Force Sync & Merge
                         Button {
+                            guard cloudKitService.accountStatus == .available else {
+                                successAlertMessage = "同步失敗：iCloud 尚未連線。請先在系統設定中登入您的 Apple ID，並確認 iCloud 權限已啟用。"
+                                showSuccessAlert = true
+                                return
+                            }
                             runAction(message: "正在與 iCloud 對接同步伺服器...") {
                                 try? modelContext.save()
                                 try? await Task.sleep(nanoseconds: 1_500_000_000)
@@ -454,6 +462,11 @@ struct ManageCloudDataSheet: View {
                         
                         // 2. Upload and replace
                         Button {
+                            guard cloudKitService.accountStatus == .available else {
+                                successAlertMessage = "同步失敗：iCloud 尚未連線。請先在系統設定中登入您的 Apple ID，並確認 iCloud 權限已啟用。"
+                                showSuccessAlert = true
+                                return
+                            }
                             runAction(message: "正在上傳本機資料覆蓋雲端庫...") {
                                 try? modelContext.save()
                                 try? await Task.sleep(nanoseconds: 2_000_000_000)
@@ -470,6 +483,11 @@ struct ManageCloudDataSheet: View {
                         
                         // 3. Clear all cloud backup
                         Button {
+                            guard cloudKitService.accountStatus == .available else {
+                                successAlertMessage = "重置失敗：iCloud 尚未連線。請先在系統設定中登入您的 Apple ID，並確認 iCloud 權限已啟用。"
+                                showSuccessAlert = true
+                                return
+                            }
                             runAction(message: "正在重置並清除雲端備份數據...") {
                                 try? await Task.sleep(nanoseconds: 2_500_000_000)
                                 successAlertMessage = "清除成功！已成功清空此應用在您個人 iCloud 儲存區的所有備份檔案。"
@@ -478,7 +496,7 @@ struct ManageCloudDataSheet: View {
                             maintenanceRow(
                                 icon: "icloud.slash.fill",
                                 title: "清除所有雲端資料 (Wipe Cloud Data)",
-                                description: "安全清空儲存於此 App 專屬雲端空間的備份，這「不會」影響或刪除本機的客戶資料。",
+                                description: "安全清空儲存於此 App 專屬雲端空間 of 備份，這「不會」影響或刪除本機的客戶資料。",
                                 color: AppTheme.Colors.danger
                             )
                         }

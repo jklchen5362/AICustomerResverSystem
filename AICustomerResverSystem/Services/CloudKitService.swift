@@ -28,6 +28,17 @@ final class CloudKitService {
         isChecking = true
         lastErrorDescription = nil
         
+        // Safety Check: Verify if the iCloud capability/entitlement is configured in Xcode.
+        // If this returns nil, it means iCloud capability is missing in entitlements or disabled,
+        // so we bypass calling CKContainer.default() entirely to avoid fatal process crashes.
+        guard FileManager.default.url(forUbiquityContainerIdentifier: nil) != nil else {
+            self.accountStatus = .noAccount
+            self.lastErrorDescription = "系統檢測到專案尚未啟用 iCloud 權限 (com.apple.developer.icloud-services)。請在 Xcode 中新增 iCloud (CloudKit) 服務權限。"
+            self.lastChecked = Date()
+            isChecking = false
+            return
+        }
+        
         do {
             let status = try await CKContainer.default().accountStatus()
             self.accountStatus = status
