@@ -19,19 +19,22 @@ class AppState {
     var branchName: String = "台北總店"
     
     // Google Sheets Sync Configuration
-    var googleSpreadsheetID: String {
-        get { UserDefaults.standard.string(forKey: "google_spreadsheet_id") ?? "" }
-        set { UserDefaults.standard.set(newValue, forKey: "google_spreadsheet_id") }
+    var googleSpreadsheetID: String = "" {
+        didSet { UserDefaults.standard.set(googleSpreadsheetID, forKey: "google_spreadsheet_id") }
     }
     
-    var googleSpreadsheetName: String {
-        get { UserDefaults.standard.string(forKey: "google_spreadsheet_name") ?? "" }
-        set { UserDefaults.standard.set(newValue, forKey: "google_spreadsheet_name") }
+    var googleSpreadsheetName: String = "" {
+        didSet { UserDefaults.standard.set(googleSpreadsheetName, forKey: "google_spreadsheet_name") }
     }
     
-    var googleLastSyncTime: Double {
-        get { UserDefaults.standard.double(forKey: "google_last_sync_time") }
-        set { UserDefaults.standard.set(newValue, forKey: "google_last_sync_time") }
+    var googleLastSyncTime: Double = 0 {
+        didSet { UserDefaults.standard.set(googleLastSyncTime, forKey: "google_last_sync_time") }
+    }
+    
+    init() {
+        self.googleSpreadsheetID = UserDefaults.standard.string(forKey: "google_spreadsheet_id") ?? ""
+        self.googleSpreadsheetName = UserDefaults.standard.string(forKey: "google_spreadsheet_name") ?? ""
+        self.googleLastSyncTime = UserDefaults.standard.double(forKey: "google_last_sync_time")
     }
     
     // Notification badge count
