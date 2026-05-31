@@ -29,25 +29,25 @@ struct ModelContainerFactory {
             configuration = ModelConfiguration(
                 schema: schema,
                 isStoredInMemoryOnly: false,
-                cloudKitDatabaseScope: nil
+                cloudKitDatabase: .none
             )
         case .privateCloud:
             configuration = ModelConfiguration(
                 schema: schema,
                 isStoredInMemoryOnly: false,
-                cloudKitDatabaseScope: .private
+                cloudKitDatabase: .automatic
             )
         case .sharedCloud:
             configuration = ModelConfiguration(
                 schema: schema,
                 isStoredInMemoryOnly: false,
-                cloudKitDatabaseScope: .shared
+                cloudKitDatabase: .private("iCloud.com.xcode.AICustomerResverSystem.shared")
             )
         case .publicCloud:
             configuration = ModelConfiguration(
                 schema: schema,
                 isStoredInMemoryOnly: false,
-                cloudKitDatabaseScope: .public
+                cloudKitDatabase: .private("iCloud.com.xcode.AICustomerResverSystem.public")
             )
         }
         
@@ -61,7 +61,7 @@ struct ModelContainerFactory {
             let fallbackConfiguration = ModelConfiguration(
                 schema: schema,
                 isStoredInMemoryOnly: false,
-                cloudKitDatabaseScope: nil
+                cloudKitDatabase: .none
             )
             
             do {
