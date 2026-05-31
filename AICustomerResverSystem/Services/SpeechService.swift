@@ -7,6 +7,7 @@ import AVFoundation
 import Observation
 
 @Observable
+@MainActor
 class SpeechService: NSObject, AVSpeechSynthesizerDelegate {
     static let shared = SpeechService()
     
