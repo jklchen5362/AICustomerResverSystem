@@ -246,10 +246,10 @@ struct DashboardView: View {
                 refreshData()
             }
             .onChange(of: selectedBranchID) { _, _ in refreshData() }
-            .onChange(of: customers) { _, _ in refreshData() }
-            .onChange(of: appointments) { _, _ in refreshData() }
-            .onChange(of: packages) { _, _ in refreshData() }
-            .onChange(of: invoices) { _, _ in refreshData() }
+            .onChange(of: customers.map { $0.persistentModelID }) { _, _ in refreshData() }
+            .onChange(of: appointments.map { "\($0.persistentModelID)-\($0.status.rawValue)-\($0.appointmentDate.timeIntervalSince1970)" }) { _, _ in refreshData() }
+            .onChange(of: packages.map { "\($0.persistentModelID)-\($0.remainingSessions)" }) { _, _ in refreshData() }
+            .onChange(of: invoices.map { "\($0.persistentModelID)-\($0.amount)" }) { _, _ in refreshData() }
         }
     }
 }
