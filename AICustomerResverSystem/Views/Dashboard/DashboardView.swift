@@ -262,6 +262,7 @@ struct DashboardView: View {
                 selectedBranchID: selectedBranchID,
                 selectedBranchName: selectedBranchName
             )
+            .modelContext(modelContext)
         }
     }
 }

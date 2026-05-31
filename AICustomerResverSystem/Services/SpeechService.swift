@@ -61,13 +61,17 @@ class SpeechService: NSObject, AVSpeechSynthesizerDelegate {
     
     // MARK: - AVSpeechSynthesizerDelegate
     
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        isPlaying = false
-        currentText = ""
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            SpeechService.shared.isPlaying = false
+            SpeechService.shared.currentText = ""
+        }
     }
     
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        isPlaying = false
-        currentText = ""
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            SpeechService.shared.isPlaying = false
+            SpeechService.shared.currentText = ""
+        }
     }
 }

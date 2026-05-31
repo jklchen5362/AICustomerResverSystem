@@ -72,6 +72,8 @@ final class CloudKitService {
             return "lock.icloud.fill"
         case .couldNotDetermine:
             return "exclamationmark.icloud.fill"
+        case .temporarilyUnavailable:
+            return "exclamationmark.icloud.fill"
         @unknown default:
             return "icloud.slash.fill"
         }
@@ -87,6 +89,8 @@ final class CloudKitService {
             return "iCloud 功能受到家長控制或企業設定之限制，無法進行跨端同步。"
         case .couldNotDetermine:
             return "連線遭遇未知的臨時問題或網路中斷，請重試或檢查裝置的網路狀態。"
+        case .temporarilyUnavailable:
+            return "iCloud 服務目前暫時不可用，可能由於伺服器維護或短暫連線中斷，請稍後重試。"
         @unknown default:
             return "未知的 iCloud 狀態。"
         }
@@ -102,6 +106,8 @@ final class CloudKitService {
             return "iCloud 帳戶存取受限"
         case .couldNotDetermine:
             return "無法確定 iCloud 帳戶狀態"
+        case .temporarilyUnavailable:
+            return "暫時不可用 (Temporarily Unavailable)"
         @unknown default:
             return "未知帳戶狀態"
         }

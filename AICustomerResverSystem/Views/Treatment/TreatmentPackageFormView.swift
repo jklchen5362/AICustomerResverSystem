@@ -22,6 +22,7 @@ struct TreatmentPackageFormView: View {
     @State private var selectedBranchID: PersistentIdentifier? = nil
     @State private var salesConsultant = ""
     @State private var paymentMethod: PaymentMethod = .creditCard
+    @State private var showQuickAddCustomerSheet = false
     
     // Validation alert
     @State private var alertTitle = ""
@@ -38,6 +39,22 @@ struct TreatmentPackageFormView: View {
                             Text(customer.fullName).tag(customer.persistentModelID as PersistentIdentifier?)
                         }
                     }
+                    
+                    Button {
+                        showQuickAddCustomerSheet = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "person.badge.plus.fill")
+                            Text("快捷新增客戶資料 Quick Add Client")
+                                .font(AppTheme.Typography.caption)
+                                .fontWeight(.semibold)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundStyle(AppTheme.Colors.accent)
+                    }
+                    .buttonStyle(.plain)
                     
                     TextField("療程名稱 Treatment Name *", text: $treatmentName)
                         .textInputAutocapitalization(.words)
@@ -102,6 +119,12 @@ struct TreatmentPackageFormView: View {
                 if selectedBranchID == nil, let firstBranch = branches.first {
                     selectedBranchID = firstBranch.persistentModelID
                 }
+            }
+            .sheet(isPresented: $showQuickAddCustomerSheet) {
+                QuickAddCustomerSheet { newCustomer in
+                    self.selectedCustomerID = newCustomer.persistentModelID
+                }
+                .modelContext(modelContext)
             }
         }
     }
@@ -185,6 +208,119 @@ struct TreatmentPackageFormView: View {
         } catch {
             alertTitle = "儲存失敗"
             alertMessage = "寫入資料庫時發生錯誤：\(error.localizedDescription)"
+            showAlert = true
+        }
+    }
+}
+
+// MARK: - QuickAddCustomerSheet
+
+struct QuickAddCustomerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    
+    @State private var fullName = ""
+    @State private var phone = ""
+    @State private var gender: Gender = .female
+    @State private var vipLevel: VIPLevel = .regular
+    @State private var allergyHistory = ""
+    @State private var skinType: SkinType? = nil
+    
+    let onSave: (Customer) -> Void
+    
+    @State private var showAlert = false
+    @State private var alertTitle = ""
+    @State private var alertMessage = ""
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("基本資料 Personal Info *") {
+                    TextField("客戶姓名 *", text: $fullName)
+                    TextField("聯絡電話 *", text: $phone)
+                        .keyboardType(.phonePad)
+                    
+                    Picker("性別", selection: $gender) {
+                        ForEach(Gender.allCases) { g in
+                            Text(g.displayName).tag(g)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                
+                Section("會員與皮膚設定 Class & Medical") {
+                    Picker("會員等級", selection: $vipLevel) {
+                        ForEach(VIPLevel.allCases) { level in
+                            Text(level.displayName).tag(level)
+                        }
+                    }
+                    
+                    Picker("膚質 Skin Type", selection: $skinType) {
+                        Text("未設定").tag(nil as SkinType?)
+                        ForEach(SkinType.allCases) { type in
+                            Text(type.displayName).tag(type as SkinType?)
+                        }
+                    }
+                    
+                    TextField("重大病史/過敏史", text: $allergyHistory)
+                }
+            }
+            .navigationTitle("快捷新增客戶")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("取消") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("儲存") {
+                        save()
+                    }
+                    .fontWeight(.bold)
+                    .foregroundStyle(AppTheme.Colors.accent)
+                }
+            }
+            .alert(alertTitle, isPresented: $showAlert) {
+                Button("確定", role: .cancel) {}
+            } message: {
+                Text(alertMessage)
+            }
+        }
+    }
+    
+    private func save() {
+        if fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            alertTitle = "欄位缺失"
+            alertMessage = "請輸入客戶姓名。"
+            showAlert = true
+            return
+        }
+        if phone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            alertTitle = "欄位缺失"
+            alertMessage = "請輸入客戶聯絡電話。"
+            showAlert = true
+            return
+        }
+        
+        let newCustomer = Customer(
+            fullName: fullName,
+            gender: gender,
+            phone: phone,
+            vipLevel: vipLevel,
+            allergyHistory: allergyHistory,
+            skinType: skinType
+        )
+        
+        modelContext.insert(newCustomer)
+        
+        do {
+            try modelContext.save()
+            onSave(newCustomer)
+            dismiss()
+        } catch {
+            alertTitle = "儲存失敗"
+            alertMessage = error.localizedDescription
             showAlert = true
         }
     }

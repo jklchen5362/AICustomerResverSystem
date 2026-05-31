@@ -7,48 +7,48 @@ import Foundation
 
 enum DatabaseType: String, CaseIterable, Identifiable, Codable {
     case localOnly = "localOnly"
-    case privateCloud = "privateCloud"
-    case sharedCloud = "sharedCloud"
-    case publicCloud = "publicCloud"
+    case cloudKit = "cloudKit"
+    case googleSheets = "googleSheets"
+    case dualSync = "dualSync"
     
     var id: String { self.rawValue }
     
     var title: String {
         switch self {
         case .localOnly:
-            return "離線本機資料庫"
-        case .privateCloud:
-            return "個人私有雲 (Private)"
-        case .sharedCloud:
-            return "共享協作雲 (Shared)"
-        case .publicCloud:
-            return "公共大眾雲 (Public)"
+            return "離線本機資料庫 (Local Only)"
+        case .cloudKit:
+            return "iCloud 雲端同步 (CloudKit)"
+        case .googleSheets:
+            return "Google 試算表同步 (Google Sheets)"
+        case .dualSync:
+            return "雙重同步 (iCloud + Google)"
         }
     }
     
     var subtitle: String {
         switch self {
         case .localOnly:
-            return "僅限此裝置"
-        case .privateCloud:
-            return "iCloud 個人同步"
-        case .sharedCloud:
-            return "團隊共享協作"
-        case .publicCloud:
-            return "公共公開儲存"
+            return "僅限此本機裝置安全儲存"
+        case .cloudKit:
+            return "跨多部 Apple 裝置自動對接"
+        case .googleSheets:
+            return "即時備份與鏡像 Google 試算表"
+        case .dualSync:
+            return "同時同步備份至 iCloud 與 Google"
         }
     }
     
     var description: String {
         switch self {
         case .localOnly:
-            return "所有資料皆以極速安全地儲存在此本機裝置內。不需登入 iCloud 或連接網路，適合注重極致隱私或純單機作業的場景。"
-        case .privateCloud:
-            return "使用您的 iCloud 私有雲端儲存空間。所有資料在您的個人多部蘋果裝置間自動同步（例如 iPhone 與 iPad），其他任何人皆無法讀取。"
-        case .sharedCloud:
-            return "適合跨團隊協作。資料儲存於 iCloud 共享資料庫，您可以邀請其他系統用戶共同檢視與維護同一個客戶管理平台。"
-        case .publicCloud:
-            return "資料儲存於 iCloud 公開區塊。所有下載此應用的用戶在擁有權限的情況下均可讀取公共資料，常用於全局共享資訊或全平台公告。"
+            return "所有客戶檔案與療程數據皆以極速安全地儲存在此本機裝置內。不需登入雲端帳戶或連接網路，適合注重極致資料安全與隱私隱密的場景。"
+        case .cloudKit:
+            return "使用您的個人 iCloud 私有雲端儲存空間。所有資料在您的個人多部蘋果裝置間自動對接同步（例如 iPhone 與 iPad），安全防丟失。"
+        case .googleSheets:
+            return "將您的本機 CRM 數據鏡像備份至 Google 試算表。方便您在 Mac/PC 瀏覽器端直接開啟、共享、統計或編輯您的客戶與排程。"
+        case .dualSync:
+            return "融合 Apple 與 Google 雲端生態之最強防護！同時啟用本機 iCloud 跨端對接，並由背景定時或手動將數據同步鏡像至 Google Sheets 試算表。"
         }
     }
     
@@ -56,12 +56,12 @@ enum DatabaseType: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .localOnly:
             return "iphone"
-        case .privateCloud:
+        case .cloudKit:
             return "cloud.fill"
-        case .sharedCloud:
-            return "person.3.sequence.fill"
-        case .publicCloud:
-            return "globe.asia.australia.fill"
+        case .googleSheets:
+            return "tablecells.fill"
+        case .dualSync:
+            return "arrow.trianglehead.2.counterclockwise.rotate.90.icloud.fill"
         }
     }
 }

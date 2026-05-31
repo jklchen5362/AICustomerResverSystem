@@ -45,13 +45,13 @@ struct CloudSyncSettingsView: View {
         .navigationTitle("雲端同步設定")
         .navigationBarTitleDisplayMode(.inline)
         .alert(
-            cloudKitService.accountStatus == .available ? "啟用雲端自動同步與對接？" : "確認切換資料庫模式？",
+            pendingDatabaseType == .googleSheets ? "確認切換至 Google 同步？" : (cloudKitService.accountStatus == .available ? "啟用雲端自動同步與對接？" : "確認切換資料庫模式？"),
             isPresented: $showSwitchConfirmation
         ) {
-            Button(cloudKitService.accountStatus == .available ? "暫時保持本機離線" : "取消", role: .cancel) {
+            Button(pendingDatabaseType == .googleSheets ? "取消" : (cloudKitService.accountStatus == .available ? "暫時保持本機離線" : "取消"), role: .cancel) {
                 pendingDatabaseType = nil
             }
-            Button(cloudKitService.accountStatus == .available ? "同步並合併資料 (Sync & Merge)" : "確認切換") {
+            Button("確認切換") {
                 if let newType = pendingDatabaseType {
                     withAnimation(AppTheme.Animations.smooth) {
                         databaseSelection = newType.rawValue
@@ -61,10 +61,16 @@ struct CloudSyncSettingsView: View {
             }
         } message: {
             if let newType = pendingDatabaseType {
-                if cloudKitService.accountStatus == .available {
-                    Text("系統偵測到您的 iCloud 帳戶已連線。\n\n啟用「\(newType.title)」後，本機原有的客戶檔案與預約記錄將會與雲端進行自動對接並合併。若您想保持純本機操作，請選擇暫時保持本機離線。")
+                if newType == .googleSheets {
+                    Text("您即將切換至「\(newType.title)」模式。\n\n啟用後，系統將引導您登入並連結您的 Google 帳戶，並串接您在雲端硬碟的試算表。確認繼續嗎？")
+                } else if newType == .dualSync {
+                    Text("您即將切換至「\(newType.title)」模式。\n\n啟用後，資料將與您的 iCloud 雲端進行自動跨端對接，並可將數據鏡像備份至 Google 試算表。確認繼續嗎？")
                 } else {
-                    Text("您即將將資料庫模式切換至「\(newType.title)」。\n\n系統檢測到您尚未登入 iCloud 或專案未設定雲端權限。切換後，資料將安全地保持在本機離線狀態運作。確認繼續嗎？")
+                    if cloudKitService.accountStatus == .available {
+                        Text("系統偵測到您的 iCloud 帳戶已連線。\n\n啟用「\(newType.title)」後，本機原有的客戶檔案與預約記錄將會與雲端進行自動對接並合併。若您想保持純本機操作，請選擇暫時保持本機離線。")
+                    } else {
+                        Text("您即將將資料庫模式切換至「\(newType.title)」。\n\n系統檢測到您尚未登入 iCloud 或專案未設定雲端權限。切換後，資料將安全地保持在本機離線狀態運作。確認繼續嗎？")
+                    }
                 }
             } else {
                 Text("確認切換資料庫模式嗎？")
@@ -290,6 +296,43 @@ struct CloudSyncSettingsView: View {
                     .buttonStyle(.plain)
                 }
             }
+            
+            if databaseSelection == DatabaseType.googleSheets.rawValue || databaseSelection == DatabaseType.dualSync.rawValue {
+                NavigationLink(destination: GoogleSheetsSettingsView()) {
+                    HStack {
+                        Image(systemName: "tablecells.badge.ellipsis")
+                            .font(.system(size: 16))
+                            .foregroundStyle(AppTheme.Colors.accent)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("配置 Google 試算表對接設定")
+                                .font(AppTheme.Typography.callout)
+                                .fontWeight(.bold)
+                                .foregroundStyle(AppTheme.Colors.primary)
+                            
+                            Text("管理授權帳戶、選擇或新建雲端備份試算表")
+                                .font(AppTheme.Typography.caption)
+                                .foregroundStyle(AppTheme.Colors.textSecondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(AppTheme.Colors.textTertiary)
+                    }
+                    .padding(AppTheme.Spacing.md)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.lg, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.lg, style: .continuous)
+                            .stroke(AppTheme.Colors.accent.opacity(0.3), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.02), radius: 5, x: 0, y: 2)
+                    .padding(.top, 4)
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
     
@@ -340,6 +383,8 @@ struct CloudSyncSettingsView: View {
             return AppTheme.Colors.warning
         case .couldNotDetermine:
             return AppTheme.Colors.info
+        case .temporarilyUnavailable:
+            return AppTheme.Colors.warning
         @unknown default:
             return AppTheme.Colors.textSecondary
         }

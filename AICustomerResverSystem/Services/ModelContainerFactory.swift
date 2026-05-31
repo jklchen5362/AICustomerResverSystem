@@ -35,29 +35,17 @@ struct ModelContainerFactory {
         let configuration: ModelConfiguration
         
         switch resolvedType {
-        case .localOnly:
+        case .localOnly, .googleSheets:
             configuration = ModelConfiguration(
                 schema: schema,
                 isStoredInMemoryOnly: false,
                 cloudKitDatabase: .none
             )
-        case .privateCloud:
+        case .cloudKit, .dualSync:
             configuration = ModelConfiguration(
                 schema: schema,
                 isStoredInMemoryOnly: false,
                 cloudKitDatabase: .automatic
-            )
-        case .sharedCloud:
-            configuration = ModelConfiguration(
-                schema: schema,
-                isStoredInMemoryOnly: false,
-                cloudKitDatabase: .private("iCloud.com.xcode.AICustomerResverSystem.shared")
-            )
-        case .publicCloud:
-            configuration = ModelConfiguration(
-                schema: schema,
-                isStoredInMemoryOnly: false,
-                cloudKitDatabase: .private("iCloud.com.xcode.AICustomerResverSystem.public")
             )
         }
         
