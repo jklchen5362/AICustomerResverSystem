@@ -188,6 +188,12 @@ struct UserGuideView: View {
                         
                         Divider().padding(.vertical, 2)
                         
+                        // Interactive Role Matrix Table
+                        RoleMatrixTable()
+                            .padding(.vertical, 4)
+                        
+                        Divider().padding(.vertical, 4)
+                        
                         roleRow(role: "👑 管理員 (Admin)", desc: "擁有最高權限。可管理分店、自訂 TTS、簽發療程發票、核銷扣堂、查看總財務報表與匯出 PDF、變更員工角色與進行雲端同步設定。")
                         roleRow(role: "💼 諮詢師 (Consultant)", desc: "可查看與編輯客戶檔案、建立預約排程、自訂曜金語音提醒、簽發療程包與財務發票、執行消費核銷。")
                         roleRow(role: "💅 美容師 (Beautician)", desc: "可查看客戶基本資料與醫療史、查看今日班表，並執行核銷扣堂、上傳對比照片與顧客手寫簽名。")
@@ -378,6 +384,97 @@ struct UserGuideView: View {
                 .padding(.leading, 4)
         }
         .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Premium Interactive Role Matrix Grid Component
+struct RoleMatrixTable: View {
+    let features: [(name: String, admin: Bool, consultant: Bool, beautician: Bool, receptionist: Bool)] = [
+        ("新增/編輯客戶檔案", true, true, false, true),
+        ("查看客戶醫療/過敏史", true, true, true, false),
+        ("建立與變更預約排程", true, true, false, true),
+        ("自訂曜金語音提醒", true, true, false, true),
+        ("簽發療程包與發票", true, true, false, false),
+        ("執行核銷扣堂與簽名", true, true, true, false),
+        ("查看財務大盤與 Charts", true, false, false, false),
+        ("一鍵導出 PDF 報表", true, false, false, false),
+        ("變更同仁角色與權限", true, false, false, false),
+        ("雲端同步與對接設定", true, false, false, false)
+    ]
+    
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: true) {
+            VStack(alignment: .leading, spacing: 0) {
+                // Table Header
+                HStack(spacing: 0) {
+                    Text("功能項目")
+                        .frame(width: 140, alignment: .leading)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(AppTheme.Colors.textPrimary)
+                    
+                    Text("👑 管理")
+                        .frame(width: 50, alignment: .center)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(AppTheme.Colors.textPrimary)
+                    
+                    Text("💼 諮詢")
+                        .frame(width: 50, alignment: .center)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(AppTheme.Colors.textPrimary)
+                    
+                    Text("💅 美容")
+                        .frame(width: 50, alignment: .center)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(AppTheme.Colors.textPrimary)
+                    
+                    Text("📞 接待")
+                        .frame(width: 50, alignment: .center)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(AppTheme.Colors.textPrimary)
+                }
+                .padding(.vertical, 8)
+                .background(AppTheme.Colors.accent.opacity(0.12))
+                
+                Divider()
+                
+                // Table Rows
+                ForEach(features, id: \.name) { feature in
+                    HStack(spacing: 0) {
+                        Text(feature.name)
+                            .frame(width: 140, alignment: .leading)
+                            .font(.system(size: 11))
+                            .foregroundStyle(AppTheme.Colors.textSecondary)
+                        
+                        statusCell(feature.admin)
+                            .frame(width: 50)
+                        
+                        statusCell(feature.consultant)
+                            .frame(width: 50)
+                        
+                        statusCell(feature.beautician)
+                            .frame(width: 50)
+                        
+                        statusCell(feature.receptionist)
+                            .frame(width: 50)
+                    }
+                    .padding(.vertical, 8)
+                    
+                    Divider()
+                }
+            }
+        }
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.gray.opacity(0.15), lineWidth: 1)
+        )
+    }
+    
+    private func statusCell(_ allowed: Bool) -> some View {
+        Image(systemName: allowed ? "checkmark.circle.fill" : "xmark.circle.fill")
+            .font(.system(size: 13))
+            .foregroundStyle(allowed ? .green : .red.opacity(0.6))
     }
 }
 
