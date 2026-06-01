@@ -420,23 +420,27 @@ struct GoogleSheetsSettingsView: View {
         } message: {
             Text(alertMessage)
         }
-        .alert("已連接試算表", isPresented: $showConnectionChoiceAlert, presenting: selectedFileForChoice) { file in
+        .alert(selectedFileForChoice?.isCRMMatched == true ? "已連接已匹配的 CRM 試算表" : "已連接試算表", isPresented: $showConnectionChoiceAlert, presenting: selectedFileForChoice) { file in
+            Button("📥 (推薦) 下載並還原雲端資料", role: .none) {
+                appState.googleSpreadsheetID = file.id
+                appState.googleSpreadsheetName = file.name
+                triggerDownload()
+            }
             Button("📤 上傳本機資料至雲端", role: .none) {
                 appState.googleSpreadsheetID = file.id
                 appState.googleSpreadsheetName = file.name
                 triggerSync()
-            }
-            Button("📥 從雲端下載並還原", role: .none) {
-                appState.googleSpreadsheetID = file.id
-                appState.googleSpreadsheetName = file.name
-                triggerDownload()
             }
             Button("僅連接暫不同步", role: .cancel) {
                 appState.googleSpreadsheetID = file.id
                 appState.googleSpreadsheetName = file.name
             }
         } message: { file in
-            Text("您已成功連接試算表「\(file.name)」。\n\n請選擇您接下來要執行的同步動作：")
+            if file.isCRMMatched {
+                Text("您已成功連接與本 App 匹配的 CRM 試算表「\(file.name)」。\n\n💡 建議：如果您是在新裝置上安裝 App，請點擊下方「下載並還原雲端資料」拉回所有客戶與預約記錄。如果是要把本機最新變更上傳，請選擇「上傳本機資料至雲端」。")
+            } else {
+                Text("您已成功連接試算表「\(file.name)」。\n\n請選擇您接下來要執行的同步動作：")
+            }
         }
     }
     
@@ -540,6 +544,19 @@ struct GoogleSheetsSettingsView: View {
 
 // MARK: - Subview: GoogleDriveFileBrowser
 
+enum FileFilterMode: String, CaseIterable, Identifiable {
+    case matched = "matched"
+    case all = "all"
+    
+    var id: String { self.rawValue }
+    var title: String {
+        switch self {
+        case .matched: return "✨ 匹配 CRM"
+        case .all: return "📁 瀏覽全部"
+        }
+    }
+}
+
 struct GoogleDriveFileBrowser: View {
     let files: [GoogleDriveFile]
     let isFetching: Bool
@@ -548,18 +565,38 @@ struct GoogleDriveFileBrowser: View {
     let onCancel: () -> Void
     
     @State private var searchText = ""
+    @State private var filterMode: FileFilterMode = .matched
     
     var filteredFiles: [GoogleDriveFile] {
-        if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return files
-        } else {
-            return files.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        var list = files
+        
+        if filterMode == .matched {
+            list = files.filter { $0.isCRMMatched }
         }
+        
+        if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            list = list.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+        
+        return list
     }
     
     var body: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: 0) {
+                // Segmented Filter Control
+                Picker("篩選模式", selection: $filterMode) {
+                    ForEach(FileFilterMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .padding(.vertical, AppTheme.Spacing.sm)
+                .background(Color.white)
+                
+                Divider()
+                
                 if isFetching {
                     Spacer()
                     ProgressView("讀取 Google 雲端硬碟中...")
@@ -571,9 +608,22 @@ struct GoogleDriveFileBrowser: View {
                         Image(systemName: "folder.badge.questionmark")
                             .font(.system(size: 48))
                             .foregroundStyle(AppTheme.Colors.textTertiary)
-                        Text(searchText.isEmpty ? "未在您的 Google Drive 發現任何試算表檔案" : "找不到符合「\(searchText)」的試算表")
-                            .font(AppTheme.Typography.caption)
-                            .foregroundStyle(AppTheme.Colors.textSecondary)
+                        
+                        if filterMode == .matched {
+                            Text("未發現任何名稱匹配的 CRM 試算表檔案")
+                                .font(AppTheme.Typography.body)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(AppTheme.Colors.primary)
+                            Text("💡 提示：請切換至「瀏覽全部」尋找，或在設定頁中點擊「建立全新對接試算表」。")
+                                .font(AppTheme.Typography.caption)
+                                .foregroundStyle(AppTheme.Colors.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 40)
+                        } else {
+                            Text(searchText.isEmpty ? "未在您的 Google Drive 發現任何試算表檔案" : "找不到符合「\(searchText)」的試算表")
+                                .font(AppTheme.Typography.caption)
+                                .foregroundStyle(AppTheme.Colors.textSecondary)
+                        }
                     }
                     Spacer()
                 } else {
@@ -584,12 +634,26 @@ struct GoogleDriveFileBrowser: View {
                             HStack {
                                 Image(systemName: "tablecells.badge.ellipsis")
                                     .font(.system(size: 18))
-                                    .foregroundStyle(AppTheme.Colors.success)
+                                    .foregroundStyle(file.isCRMMatched ? AppTheme.Colors.accent : AppTheme.Colors.success)
                                 
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(file.name)
-                                        .font(AppTheme.Typography.body)
-                                        .foregroundStyle(AppTheme.Colors.primary)
+                                    HStack(spacing: 6) {
+                                        Text(file.name)
+                                            .font(AppTheme.Typography.body)
+                                            .foregroundStyle(AppTheme.Colors.primary)
+                                            .fontWeight(file.isCRMMatched ? .semibold : .regular)
+                                        
+                                        if file.isCRMMatched {
+                                            Text("CRM 匹配")
+                                                .font(.system(size: 9, weight: .bold))
+                                                .foregroundStyle(AppTheme.Colors.accent)
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 1)
+                                                .background(AppTheme.Colors.accent.opacity(0.12))
+                                                .clipShape(Capsule())
+                                        }
+                                    }
+                                    
                                     Text("ID: \(file.id.prefix(8))...\(file.id.suffix(6))")
                                         .font(.system(size: 9, design: .monospaced))
                                         .foregroundStyle(AppTheme.Colors.textSecondary)

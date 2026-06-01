@@ -9,6 +9,11 @@ struct GoogleDriveFile: Codable, Identifiable, Hashable {
     let id: String
     let name: String
     let mimeType: String
+    
+    var isCRMMatched: Bool {
+        let n = name.lowercased()
+        return n.contains("極致美學") || n.contains("crm") || n.contains("隨身特助") || n.contains("aicustomer")
+    }
 }
 
 class GoogleSheetsService {
