@@ -194,16 +194,20 @@ class GoogleSheetsSyncEngine {
         
         print("[SyncEngine] Starting full pull/download from Google Sheets ID: \(spreadsheetID)")
         
-        // 1. Pull Customers first (since appointments, packages, invoices refer to them)
+        // 1. Ensure all 4 standard worksheets exist prior to download to avoid range errors
+        let titles = [customersSheet, appointmentsSheet, packagesSheet, invoicesSheet]
+        try await sheetsService.ensureWorksheetsExist(spreadsheetID: spreadsheetID, titles: titles)
+        
+        // 2. Pull Customers first (since appointments, packages, invoices refer to them)
         try await pullCustomers(context: context, spreadsheetID: spreadsheetID)
         
-        // 2. Pull Appointments
+        // 3. Pull Appointments
         try await pullAppointments(context: context, spreadsheetID: spreadsheetID)
         
-        // 3. Pull Packages
+        // 4. Pull Packages
         try await pullPackages(context: context, spreadsheetID: spreadsheetID)
         
-        // 4. Pull Invoices
+        // 5. Pull Invoices
         try await pullInvoices(context: context, spreadsheetID: spreadsheetID)
         
         print("[SyncEngine] Full pull/download completed successfully.")

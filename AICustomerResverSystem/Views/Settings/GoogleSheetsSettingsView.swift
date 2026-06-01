@@ -523,6 +523,16 @@ struct GoogleDriveFileBrowser: View {
     let onSelect: (GoogleDriveFile) -> Void
     let onCancel: () -> Void
     
+    @State private var searchText = ""
+    
+    var filteredFiles: [GoogleDriveFile] {
+        if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return files
+        } else {
+            return files.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+    }
+    
     var body: some View {
         NavigationStack {
             VStack {
@@ -531,19 +541,19 @@ struct GoogleDriveFileBrowser: View {
                     ProgressView("讀取 Google 雲端硬碟中...")
                         .tint(AppTheme.Colors.accent)
                     Spacer()
-                } else if files.isEmpty {
+                } else if filteredFiles.isEmpty {
                     Spacer()
                     VStack(spacing: AppTheme.Spacing.sm) {
                         Image(systemName: "folder.badge.questionmark")
                             .font(.system(size: 48))
                             .foregroundStyle(AppTheme.Colors.textTertiary)
-                        Text("未在您的 Google Drive 發現任何試算表檔案")
+                        Text(searchText.isEmpty ? "未在您的 Google Drive 發現任何試算表檔案" : "找不到符合「\(searchText)」的試算表")
                             .font(AppTheme.Typography.caption)
                             .foregroundStyle(AppTheme.Colors.textSecondary)
                     }
                     Spacer()
                 } else {
-                    List(files) { file in
+                    List(filteredFiles) { file in
                         Button {
                             onSelect(file)
                         } label: {
@@ -576,6 +586,7 @@ struct GoogleDriveFileBrowser: View {
             }
             .navigationTitle("選擇 Google 試算表對接")
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "搜尋試算表名稱...")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("取消") { onCancel() }
