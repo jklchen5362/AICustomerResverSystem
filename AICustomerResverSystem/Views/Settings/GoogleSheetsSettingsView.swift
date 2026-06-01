@@ -23,6 +23,10 @@ struct GoogleSheetsSettingsView: View {
     @State private var clientIDInput = ""
     @State private var showClientIDSheet = false
     
+    // Switch Connection Choices
+    @State private var showConnectionChoiceAlert = false
+    @State private var selectedFileForChoice: GoogleDriveFile? = nil
+    
     // Alerts
     @State private var alertTitle = ""
     @State private var alertMessage = ""
@@ -171,6 +175,21 @@ struct GoogleSheetsSettingsView: View {
                         Text(appState.googleSpreadsheetID.prefix(12) + "..." + appState.googleSpreadsheetID.suffix(8))
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(AppTheme.Colors.textSecondary)
+                        
+                        Button {
+                            appState.googleSpreadsheetID = ""
+                            appState.googleSpreadsheetName = ""
+                        } label: {
+                            Text("斷開")
+                                .font(AppTheme.Typography.caption2)
+                                .fontWeight(.medium)
+                                .foregroundStyle(AppTheme.Colors.danger)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(AppTheme.Colors.danger.opacity(0.1))
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
                     }
                     
                     HStack {
@@ -299,12 +318,12 @@ struct GoogleSheetsSettingsView: View {
                 files: driveFiles,
                 isFetching: isFetchingFiles,
                 onSelect: { file in
-                    appState.googleSpreadsheetID = file.id
-                    appState.googleSpreadsheetName = file.name
+                    selectedFileForChoice = file
                     showFileBrowser = false
-                    alertTitle = "連接成功"
-                    alertMessage = "成功連接試算表「\(file.name)」。可點擊上方同步按鈕將現有資料鏡像上傳。"
-                    showAlert = true
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showConnectionChoiceAlert = true
+                    }
                 },
                 onCancel: { showFileBrowser = false }
             )
@@ -376,6 +395,24 @@ struct GoogleSheetsSettingsView: View {
             Button("確定", role: .cancel) { }
         } message: {
             Text(alertMessage)
+        }
+        .alert("已連接試算表", isPresented: $showConnectionChoiceAlert, presenting: selectedFileForChoice) { file in
+            Button("📤 上傳本機資料至雲端", role: .none) {
+                appState.googleSpreadsheetID = file.id
+                appState.googleSpreadsheetName = file.name
+                triggerSync()
+            }
+            Button("📥 從雲端下載並還原", role: .none) {
+                appState.googleSpreadsheetID = file.id
+                appState.googleSpreadsheetName = file.name
+                triggerDownload()
+            }
+            Button("僅連接暫不同步", role: .cancel) {
+                appState.googleSpreadsheetID = file.id
+                appState.googleSpreadsheetName = file.name
+            }
+        } message: { file in
+            Text("您已成功連接試算表「\(file.name)」。\n\n請選擇您接下來要執行的同步動作：")
         }
     }
     
