@@ -93,7 +93,7 @@ class AppState {
         saveObserver = nil
         
         saveObserver = NotificationCenter.default.addObserver(
-            forName: Notification.Name("NSManagedObjectContextDidSave"),
+            forName: ModelContext.didSave,
             object: nil,
             queue: .main
         ) { [weak self] _ in
