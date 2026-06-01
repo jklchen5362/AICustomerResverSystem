@@ -486,7 +486,12 @@ struct GoogleSheetsSettingsView: View {
         isSyncing = true
         Task {
             do {
-                let file = try await sheetsService.createNewSpreadsheet(title: "極致美學 CRM 雲端資料庫")
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yy_MM_dd"
+                let dateStr = formatter.string(from: Date())
+                let sheetTitle = "極致美學 CRM 雲端資料庫_\(dateStr)"
+                
+                let file = try await sheetsService.createNewSpreadsheet(title: sheetTitle)
                 appState.googleSpreadsheetID = file.id
                 appState.googleSpreadsheetName = file.name
                 isSyncing = false
