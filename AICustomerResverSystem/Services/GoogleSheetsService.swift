@@ -216,6 +216,21 @@ class GoogleSheetsService {
         guard let valuesMatrix = response.values else { return [] }
         return valuesMatrix.map { row in row.map { $0.stringValue } }
     }
+    
+    func fetchSpreadsheetTitle(spreadsheetID: String) async throws -> String {
+        let url = URL(string: "https://sheets.googleapis.com/v4/spreadsheets/\(spreadsheetID)?fields=properties.title")!
+        let data = try await performRequest(url: url, method: "GET")
+        
+        struct Response: Codable {
+            struct Properties: Codable {
+                let title: String
+            }
+            let properties: Properties
+        }
+        
+        let response = try JSONDecoder().decode(Response.self, from: data)
+        return response.properties.title
+    }
 }
 
 // MARK: - API Decodable Decoders

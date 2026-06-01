@@ -23,6 +23,10 @@ struct GoogleSheetsSettingsView: View {
     @State private var clientIDInput = ""
     @State private var showClientIDSheet = false
     
+    // Connect Existing Spreadsheet by URL/ID
+    @State private var showConnectExistingSheet = false
+    @State private var inputSpreadsheetURLOrID = ""
+    
     // Switch Connection Choices
     @State private var showConnectionChoiceAlert = false
     @State private var selectedFileForChoice: GoogleDriveFile? = nil
@@ -163,6 +167,13 @@ struct GoogleSheetsSettingsView: View {
                         Label("瀏覽並連接雲端硬碟現有試算表", systemImage: "folder.fill")
                             .foregroundStyle(AppTheme.Colors.primary)
                     }
+                    
+                    Button {
+                        showConnectExistingSheet = true
+                    } label: {
+                        Label("輸入試算表網址或 ID 連接 (Connect Existing)", systemImage: "link")
+                            .foregroundStyle(AppTheme.Colors.info)
+                    }
                 }
             }
             
@@ -180,7 +191,7 @@ struct GoogleSheetsSettingsView: View {
                             appState.googleSpreadsheetID = ""
                             appState.googleSpreadsheetName = ""
                         } label: {
-                            Text("斷開")
+                            Text("斷開/退出")
                                 .font(AppTheme.Typography.caption2)
                                 .fontWeight(.medium)
                                 .foregroundStyle(AppTheme.Colors.danger)
@@ -326,6 +337,19 @@ struct GoogleSheetsSettingsView: View {
                     }
                 },
                 onCancel: { showFileBrowser = false }
+            )
+        }
+        .sheet(isPresented: $showConnectExistingSheet) {
+            ConnectExistingSheetView(
+                urlOrIDInput: $inputSpreadsheetURLOrID,
+                onConnect: { id, title in
+                    let file = GoogleDriveFile(id: id, name: title, mimeType: "application/vnd.google-apps.spreadsheet")
+                    selectedFileForChoice = file
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showConnectionChoiceAlert = true
+                    }
+                }
             )
         }
         .sheet(isPresented: $showClientIDSheet) {
@@ -595,5 +619,114 @@ struct GoogleDriveFileBrowser: View {
             }
             .background(AppTheme.Colors.background)
         }
+    }
+}
+
+// MARK: - Subview: ConnectExistingSheetView
+
+struct ConnectExistingSheetView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var urlOrIDInput: String
+    let onConnect: (String, String) -> Void
+    
+    @State private var isVerifying = false
+    @State private var errorMessage = ""
+    private let sheetsService = GoogleSheetsService.shared
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("輸入現有試算表連結或 ID") {
+                    Text("請複製並貼上您的 Google 試算表完整網址，或是輸入試算表的專屬 ID：")
+                        .font(AppTheme.Typography.caption)
+                        .foregroundStyle(AppTheme.Colors.textSecondary)
+                    
+                    TextField("https://docs.google.com/spreadsheets/d/...", text: $urlOrIDInput)
+                        .font(.system(size: 12, design: .monospaced))
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                    
+                    if !errorMessage.isEmpty {
+                        Text(errorMessage)
+                            .font(AppTheme.Typography.caption)
+                            .foregroundStyle(AppTheme.Colors.danger)
+                            .fontWeight(.medium)
+                            .padding(.top, 2)
+                    }
+                }
+                
+                Section("如何取得試算表連結？") {
+                    Text("1. 開啟您的瀏覽器前往 Google Drive。\n2. 點選您要連接的現有試算表檔案。\n3. 複製瀏覽器網址列中的整行網址（或是複製網址中 /d/ 後面的英數組合 ID）。\n4. 將其貼於上方欄位，點擊「驗證並連接」即可。")
+                        .font(.system(size: 11))
+                        .foregroundStyle(AppTheme.Colors.textSecondary)
+                        .lineSpacing(4)
+                }
+            }
+            .navigationTitle("連接現有試算表 (Connect Existing)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("取消") { dismiss() }
+                        .foregroundStyle(AppTheme.Colors.textSecondary)
+                }
+                
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        verifyAndConnect()
+                    } label: {
+                        if isVerifying {
+                            ProgressView()
+                                .tint(AppTheme.Colors.accent)
+                        } else {
+                            Text("驗證並連接")
+                                .fontWeight(.bold)
+                                .foregroundStyle(AppTheme.Colors.accent)
+                        }
+                    }
+                    .disabled(isVerifying || urlOrIDInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .background(AppTheme.Colors.background)
+        }
+    }
+    
+    private func verifyAndConnect() {
+        let trimmed = urlOrIDInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        
+        isVerifying = true
+        errorMessage = ""
+        
+        let id = extractSpreadsheetID(from: trimmed)
+        
+        Task {
+            do {
+                let title = try await sheetsService.fetchSpreadsheetTitle(spreadsheetID: id)
+                isVerifying = false
+                onConnect(id, title)
+                dismiss()
+            } catch {
+                isVerifying = false
+                errorMessage = "無法讀取試算表，請確認：\n1. 試算表 ID/網址是否正確\n2. 您的 Google 帳戶是否有存取權限\n3. 是否已啟用 Google Sheets API\n\n錯誤詳情：\(error.localizedDescription)"
+            }
+        }
+    }
+    
+    private func extractSpreadsheetID(from input: String) -> String {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.contains("docs.google.com/spreadsheets") {
+            if let range = trimmed.range(of: "/d/") {
+                let start = range.upperBound
+                let rest = trimmed[start...]
+                if let endRange = rest.range(of: "/") {
+                    return String(rest[..<endRange.lowerBound])
+                } else if let queryRange = rest.range(of: "?") {
+                    return String(rest[..<queryRange.lowerBound])
+                } else {
+                    return String(rest)
+                }
+            }
+        }
+        return trimmed
     }
 }
