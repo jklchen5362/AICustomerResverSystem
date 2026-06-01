@@ -251,6 +251,27 @@ struct GoogleSheetsSettingsView: View {
             }
             
             if authService.isAuthorized && !appState.googleSpreadsheetID.isEmpty {
+                Section("即時自動同步設定 (Instant Auto Sync)") {
+                    Toggle(isOn: Bindable(appState).googleInstantSyncEnabled) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("啟用本機變更即時同步")
+                                .font(AppTheme.Typography.body)
+                                .fontWeight(.medium)
+                            Text("偵測到本機資料變更時，立即自動鏡像上傳至雲端")
+                                .font(AppTheme.Typography.caption)
+                                .foregroundStyle(AppTheme.Colors.textSecondary)
+                        }
+                    }
+                    .tint(AppTheme.Colors.accent)
+                    
+                    if appState.googleInstantSyncEnabled {
+                        Text("💡 系統已啟用即時智慧防抖技術 (Debounce)，在您連續編輯資料時，會自動延遲 3 秒在背景靜默完成同步，以防頻繁呼叫 Google API 造成擁堵。")
+                            .font(AppTheme.Typography.caption2)
+                            .foregroundStyle(AppTheme.Colors.textTertiary)
+                            .lineSpacing(2)
+                    }
+                }
+                
                 Section("自動背景同步設定 (Scheduled Auto Sync)") {
                     Toggle(isOn: Bindable(appState).googleAutoSyncEnabled) {
                         VStack(alignment: .leading, spacing: 4) {

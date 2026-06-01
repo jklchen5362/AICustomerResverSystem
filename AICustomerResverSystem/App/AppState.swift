@@ -49,11 +49,24 @@ class AppState {
         }
     }
     
+    // Instant Sync (Immediate Sync on Save) Configuration
+    var googleInstantSyncEnabled: Bool = false {
+        didSet {
+            UserDefaults.standard.set(googleInstantSyncEnabled, forKey: "google_instant_sync_enabled")
+        }
+    }
+    
     @ObservationIgnored
     var onTriggerAutoSync: (() -> Void)? = nil
     
     @ObservationIgnored
     private var autoSyncTimer: Timer?
+    
+    @ObservationIgnored
+    private var saveObserver: NSObjectProtocol?
+    
+    @ObservationIgnored
+    private var instantSyncWorkItem: DispatchWorkItem?
     
     init() {
         self.googleSpreadsheetID = UserDefaults.standard.string(forKey: "google_spreadsheet_id") ?? ""
@@ -62,6 +75,46 @@ class AppState {
         self.googleAutoSyncEnabled = UserDefaults.standard.bool(forKey: "google_auto_sync_enabled")
         let savedInterval = UserDefaults.standard.integer(forKey: "google_sync_interval_minutes")
         self.googleSyncIntervalMinutes = savedInterval > 0 ? savedInterval : 30
+        self.googleInstantSyncEnabled = UserDefaults.standard.bool(forKey: "google_instant_sync_enabled")
+        
+        setupSaveObserver()
+    }
+    
+    deinit {
+        if let observer = saveObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+    
+    func setupSaveObserver() {
+        if let observer = saveObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        saveObserver = nil
+        
+        saveObserver = NotificationCenter.default.addObserver(
+            forName: Notification.Name("NSManagedObjectContextDidSave"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.handleDatabaseSave()
+        }
+    }
+    
+    private func handleDatabaseSave() {
+        guard googleInstantSyncEnabled && !googleSpreadsheetID.isEmpty else { return }
+        
+        // Cancel any pending instant sync
+        instantSyncWorkItem?.cancel()
+        
+        let workItem = DispatchWorkItem { [weak self] in
+            print("[AppState] Instant sync debouncer fired. Triggering immediate upload to Google Sheets...")
+            self?.onTriggerAutoSync?()
+        }
+        
+        instantSyncWorkItem = workItem
+        // Debounce for 3 seconds to aggregate edits and avoid API spam
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: workItem)
     }
     
     func setupAutoSyncTimer() {
