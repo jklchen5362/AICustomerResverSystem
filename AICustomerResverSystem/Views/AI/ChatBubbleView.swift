@@ -6,6 +6,14 @@ import SwiftUI
 struct ChatBubbleView: View {
     let message: ChatMessage
     
+    private var messageAttributedString: AttributedString {
+        do {
+            return try AttributedString(markdown: message.content)
+        } catch {
+            return AttributedString(message.content)
+        }
+    }
+    
     var body: some View {
         HStack(alignment: .top, spacing: AppTheme.Spacing.sm) {
             if !message.isFromUser {
@@ -23,7 +31,7 @@ struct ChatBubbleView: View {
             
             VStack(alignment: message.isFromUser ? .trailing : .leading, spacing: 4) {
                 // Message bubble container
-                Text(LocalizedStringKey(message.content))
+                Text(messageAttributedString)
                     .font(AppTheme.Typography.callout)
                     .foregroundStyle(message.isFromUser ? .white : AppTheme.Colors.textPrimary)
                     .padding(.horizontal, 14)
