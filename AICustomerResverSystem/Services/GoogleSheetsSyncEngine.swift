@@ -18,6 +18,7 @@ class GoogleSheetsSyncEngine {
     let appointmentsSheet = "預約記錄 (Appointments)"
     let packagesSheet = "療程方案 (Packages)"
     let invoicesSheet = "財務發票 (Invoices)"
+    let dutyRostersSheet = "值班排班 (Duty Rosters)"
     
     func syncAllData(context: ModelContext, spreadsheetID: String) async throws {
         guard !spreadsheetID.isEmpty else {
@@ -26,8 +27,8 @@ class GoogleSheetsSyncEngine {
         
         print("[SyncEngine] Starting full database sync to Google Sheets ID: \(spreadsheetID)")
         
-        // 1. Ensure all 4 standard worksheets exist
-        let titles = [customersSheet, appointmentsSheet, packagesSheet, invoicesSheet]
+        // 1. Ensure all standard worksheets exist
+        let titles = [customersSheet, appointmentsSheet, packagesSheet, invoicesSheet, dutyRostersSheet]
         try await sheetsService.ensureWorksheetsExist(spreadsheetID: spreadsheetID, titles: titles)
         
         // 2. Sync Customers
@@ -41,6 +42,9 @@ class GoogleSheetsSyncEngine {
         
         // 5. Sync Invoices
         try await syncInvoices(context: context, spreadsheetID: spreadsheetID)
+        
+        // 6. Sync Duty Rosters
+        try await syncDutyRosters(context: context, spreadsheetID: spreadsheetID)
         
         print("[SyncEngine] Full database synchronization completed successfully.")
         
@@ -194,8 +198,8 @@ class GoogleSheetsSyncEngine {
         
         print("[SyncEngine] Starting full pull/download from Google Sheets ID: \(spreadsheetID)")
         
-        // 1. Ensure all 4 standard worksheets exist prior to download to avoid range errors
-        let titles = [customersSheet, appointmentsSheet, packagesSheet, invoicesSheet]
+        // 1. Ensure all standard worksheets exist prior to download to avoid range errors
+        let titles = [customersSheet, appointmentsSheet, packagesSheet, invoicesSheet, dutyRostersSheet]
         try await sheetsService.ensureWorksheetsExist(spreadsheetID: spreadsheetID, titles: titles)
         
         // 2. Pull Customers first (since appointments, packages, invoices refer to them)
@@ -209,6 +213,9 @@ class GoogleSheetsSyncEngine {
         
         // 5. Pull Invoices
         try await pullInvoices(context: context, spreadsheetID: spreadsheetID)
+        
+        // 6. Pull Duty Rosters
+        try await pullDutyRosters(context: context, spreadsheetID: spreadsheetID)
         
         print("[SyncEngine] Full pull/download completed successfully.")
         
@@ -525,6 +532,85 @@ class GoogleSheetsSyncEngine {
             return date
         }
         return Date()
+    }
+    
+    private func syncDutyRosters(context: ModelContext, spreadsheetID: String) async throws {
+        let descriptor = FetchDescriptor<DutyRoster>(sortBy: [SortDescriptor(\.date, order: .reverse)])
+        let rosters = (try? context.fetch(descriptor)) ?? []
+        
+        let headers = [
+            "值班日期 (Date)", "執勤據點 (Branch)", "店長/副店長 (Managers)", 
+            "值班醫師 (Doctors)", "值班諮詢師 (Consultants)", "排班備註 (Notes)", "排班編號 (ID)"
+        ]
+        
+        let rows = rosters.map { roster -> [String] in
+            return [
+                roster.date.formattedISODate,
+                roster.branch?.name ?? "台北總店",
+                roster.onDutyManagers.joined(separator: "、"),
+                roster.onDutyDoctors.joined(separator: "、"),
+                roster.onDutyConsultants.joined(separator: "、"),
+                roster.notes,
+                roster.rosterID
+            ]
+        }
+        
+        try await sheetsService.overwriteWorksheet(
+            spreadsheetID: spreadsheetID,
+            sheetTitle: dutyRostersSheet,
+            headers: headers,
+            rows: rows
+        )
+    }
+    
+    private func pullDutyRosters(context: ModelContext, spreadsheetID: String) async throws {
+        let values = try await sheetsService.fetchWorksheetValues(spreadsheetID: spreadsheetID, range: dutyRostersSheet)
+        guard values.count > 1 else { return }
+        
+        let dataRows = values.dropFirst()
+        
+        for row in dataRows {
+            guard row.count >= 1 else { continue }
+            let dateStr = row[0]
+            guard let date = parseDate(dateStr) else { continue }
+            
+            let branchName = row.indices.contains(1) ? row[1] : "台北總店"
+            let managersStr = row.indices.contains(2) ? row[2] : ""
+            let doctorsStr = row.indices.contains(3) ? row[3] : ""
+            let consultantsStr = row.indices.contains(4) ? row[4] : ""
+            let notes = row.indices.contains(5) ? row[5] : ""
+            let id = row.indices.contains(6) ? row[6] : "RST-" + UUID().uuidString.prefix(6).uppercased()
+            
+            let onDutyManagers = managersStr.isEmpty ? [] : managersStr.components(separatedBy: "、")
+            let onDutyDoctors = doctorsStr.isEmpty ? [] : doctorsStr.components(separatedBy: "、")
+            let onDutyConsultants = consultantsStr.isEmpty ? [] : consultantsStr.components(separatedBy: "、")
+            
+            let descriptor = FetchDescriptor<DutyRoster>(predicate: #Predicate<DutyRoster> { $0.rosterID == id })
+            let existing = try? context.fetch(descriptor).first
+            
+            let targetBranch = getOrCreateBranch(context: context, name: branchName)
+            
+            if let roster = existing {
+                roster.date = date
+                roster.onDutyManagers = onDutyManagers
+                roster.onDutyDoctors = onDutyDoctors
+                roster.onDutyConsultants = onDutyConsultants
+                roster.notes = notes
+                roster.branch = targetBranch
+            } else {
+                let newRoster = DutyRoster(
+                    rosterID: id,
+                    date: date,
+                    onDutyDoctors: onDutyDoctors,
+                    onDutyManagers: onDutyManagers,
+                    onDutyConsultants: onDutyConsultants,
+                    notes: notes
+                )
+                newRoster.branch = targetBranch
+                context.insert(newRoster)
+            }
+        }
+        try? context.save()
     }
 }
 
