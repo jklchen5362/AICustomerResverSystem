@@ -18,6 +18,7 @@ struct ModelContainerFactory {
         AppNotification.self,
         UserAccount.self,
         ChatMessage.self,
+        DutyRoster.self,
     ])
     
     @MainActor

@@ -16,12 +16,29 @@ struct DashboardView: View {
     @State private var selectedBranchID: PersistentIdentifier? = nil
     @State private var showCustomerDetailSheet = false
     
+    @Query private var dutyRosters: [DutyRoster]
+    @State private var showDutyRosterForm = false
+    
     private var selectedBranchName: String {
         if let branchID = selectedBranchID,
            let branch = branches.first(where: { $0.persistentModelID == branchID }) {
             return branch.name
         }
         return "全部分店"
+    }
+    
+    private var todayRoster: DutyRoster? {
+        let start = Date().startOfDay
+        let end = Date().endOfDay
+        
+        if let branchID = selectedBranchID {
+            return dutyRosters.first(where: {
+                $0.branch?.persistentModelID == branchID &&
+                $0.date >= start && $0.date <= end
+            })
+        } else {
+            return dutyRosters.first(where: { $0.date >= start && $0.date <= end })
+        }
     }
     
     private func refreshData() {
@@ -37,6 +54,97 @@ struct DashboardView: View {
                 VStack(spacing: AppTheme.Spacing.md) {
                     // Header welcome card
                     DashboardCardView()
+                    
+                    // Today's Duty Roster Card
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.xs) {
+                        HStack {
+                            Image(systemName: "calendar.badge.clock")
+                                .foregroundStyle(AppTheme.Colors.accent)
+                            Text("今日值班人員 On-Duty Staff")
+                                .font(AppTheme.Typography.headline)
+                                .foregroundStyle(AppTheme.Colors.textPrimary)
+                            
+                            Spacer()
+                            
+                            Button {
+                                showDutyRosterForm = true
+                            } label: {
+                                HStack(spacing: 2) {
+                                    Image(systemName: "pencil.line")
+                                    Text("登錄排班")
+                                }
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(AppTheme.Colors.accent)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(AppTheme.Colors.accent.opacity(0.1))
+                                .clipShape(Capsule())
+                            }
+                        }
+                        .padding(.bottom, 2)
+                        
+                        if let roster = todayRoster,
+                           (!roster.onDutyDoctor.isEmpty || !roster.onDutyManager.isEmpty || !roster.onDutyConsultant.isEmpty) {
+                            HStack(spacing: AppTheme.Spacing.md) {
+                                rosterStaffItem(
+                                    role: "值班醫師",
+                                    name: roster.onDutyDoctor.isEmpty ? "未安排" : roster.onDutyDoctor,
+                                    icon: "stethoscope",
+                                    color: AppTheme.Colors.accent
+                                )
+                                
+                                Divider().frame(height: 30)
+                                
+                                rosterStaffItem(
+                                    role: "值班店長",
+                                    name: roster.onDutyManager.isEmpty ? "未安排" : roster.onDutyManager,
+                                    icon: "shield.checkered",
+                                    color: AppTheme.Colors.accentSecondary
+                                )
+                                
+                                Divider().frame(height: 30)
+                                
+                                rosterStaffItem(
+                                    role: "值班諮詢師",
+                                    name: roster.onDutyConsultant.isEmpty ? "未安排" : roster.onDutyConsultant,
+                                    icon: "person.badge.clock.fill",
+                                    color: AppTheme.Colors.info
+                                )
+                            }
+                            .padding(.vertical, 6)
+                            
+                            if !roster.notes.isEmpty {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "info.circle.fill")
+                                        .font(.system(size: 10))
+                                    Text("排班備註：\(roster.notes)")
+                                        .font(.system(size: 10))
+                                }
+                                .foregroundStyle(AppTheme.Colors.textSecondary)
+                                .padding(.top, 2)
+                            }
+                        } else {
+                            HStack {
+                                Spacer()
+                                VStack(spacing: 4) {
+                                    Text("今日尚未登錄值班人員名單")
+                                        .font(AppTheme.Typography.caption)
+                                        .foregroundStyle(AppTheme.Colors.textSecondary)
+                                    Text("點選右上角「登錄排班」即可快速設定")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(AppTheme.Colors.textTertiary)
+                                }
+                                Spacer()
+                            }
+                            .padding(.vertical, 8)
+                        }
+                    }
+                    .padding(AppTheme.Spacing.md)
+                    .background {
+                        RoundedRectangle(cornerRadius: AppTheme.CornerRadius.lg)
+                            .fill(Color.white)
+                            .shadow(color: .black.opacity(0.03), radius: 10, x: 0, y: 4)
+                    }
                     
                     // Stats 2x2 grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: AppTheme.Spacing.md) {
@@ -256,6 +364,7 @@ struct DashboardView: View {
             .onChange(of: appointments.map { "\($0.persistentModelID)-\($0.status.rawValue)-\($0.appointmentDate.timeIntervalSince1970)" }) { _, _ in refreshData() }
             .onChange(of: packages.map { "\($0.persistentModelID)-\($0.remainingSessions)" }) { _, _ in refreshData() }
             .onChange(of: invoices.map { "\($0.persistentModelID)-\($0.amount)" }) { _, _ in refreshData() }
+            .onChange(of: dutyRosters.map { "\($0.persistentModelID)-\($0.onDutyDoctor)-\($0.onDutyManager)-\($0.onDutyConsultant)" }) { _, _ in refreshData() }
         }
         .sheet(isPresented: $showCustomerDetailSheet) {
             DashboardCustomerListView(
@@ -264,6 +373,32 @@ struct DashboardView: View {
             )
             .modelContext(modelContext)
         }
+        .sheet(isPresented: $showDutyRosterForm) {
+            DutyRosterFormView(
+                activeBranchID: selectedBranchID,
+                activeBranchName: selectedBranchName
+            )
+            .modelContext(modelContext)
+        }
+    }
+    
+    private func rosterStaffItem(role: String, name: String, icon: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 11))
+                    .foregroundStyle(color)
+                Text(role)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppTheme.Colors.textSecondary)
+            }
+            
+            Text(name)
+                .font(AppTheme.Typography.body)
+                .fontWeight(.bold)
+                .foregroundStyle(AppTheme.Colors.textPrimary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
