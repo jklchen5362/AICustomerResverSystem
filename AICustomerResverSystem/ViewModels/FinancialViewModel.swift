@@ -30,6 +30,13 @@ struct CustomerSpending: Identifiable, Sendable {
     let amount: Double
 }
 
+struct ConsultantPerformance: Identifiable, Sendable {
+    let id = UUID()
+    let name: String
+    let amount: Double
+    let transactionCount: Int
+}
+
 @Observable
 class FinancialViewModel {
     var selectedPeriod: FinancialPeriod = .thisMonth
@@ -141,5 +148,21 @@ class FinancialViewModel {
         
         let sorted = clientSpending.sorted(by: { $0.value > $1.value }).prefix(5)
         return sorted.map { CustomerSpending(name: $0.key, amount: $0.value) }
+    }
+    
+    func consultantPerformance(invoices: [Invoice]) -> [ConsultantPerformance] {
+        let filtered = filterInvoicesByPeriod(invoices)
+        var performanceMap: [String: (amount: Double, count: Int)] = [:]
+        
+        for invoice in filtered {
+            let consultant = invoice.salesConsultant.trimmingCharacters(in: .whitespacesAndNewlines)
+            let name = consultant.isEmpty ? "未指定經手人" : consultant
+            
+            let current = performanceMap[name, default: (0.0, 0)]
+            performanceMap[name] = (current.amount + invoice.amount, current.count + 1)
+        }
+        
+        let sorted = performanceMap.sorted(by: { $0.value.amount > $1.value.amount })
+        return sorted.map { ConsultantPerformance(name: $0.key, amount: $0.value.amount, transactionCount: $0.value.count) }
     }
 }

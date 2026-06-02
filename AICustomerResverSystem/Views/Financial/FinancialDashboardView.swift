@@ -189,6 +189,69 @@ struct FinancialDashboardView: View {
                     .background(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.lg))
                     .shadow(color: .black.opacity(0.03), radius: 6, x: 0, y: 3)
+                    
+                    // Consultant Sales Performance Rank Card
+                    let consultantData = viewModel.consultantPerformance(invoices: invoices)
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                        Text("人員銷售業績排行 Consultant Performance")
+                            .font(AppTheme.Typography.headline)
+                            .foregroundStyle(AppTheme.Colors.textPrimary)
+                        
+                        if consultantData.isEmpty {
+                            HStack {
+                                Spacer()
+                                Text("此區間暫無業績統計數據")
+                                    .font(AppTheme.Typography.caption)
+                                    .foregroundStyle(AppTheme.Colors.textTertiary)
+                                Spacer()
+                            }
+                            .padding(.vertical, AppTheme.Spacing.md)
+                        } else {
+                            VStack(spacing: 0) {
+                                ForEach(Array(consultantData.enumerated()), id: \.element.id) { index, item in
+                                    HStack(spacing: AppTheme.Spacing.sm) {
+                                        // Rank badge
+                                        ZStack {
+                                            Circle()
+                                                .fill(index == 0 ? AppTheme.Colors.vipGold.opacity(0.2) : (index == 1 ? AppTheme.Colors.vipSilver.opacity(0.2) : AppTheme.Colors.textTertiary.opacity(0.12)))
+                                                .frame(width: 24, height: 24)
+                                            
+                                            Text("\(index + 1)")
+                                                .font(.system(size: 11, weight: .bold))
+                                                .foregroundStyle(index == 0 ? AppTheme.Colors.vipGold : (index == 1 ? AppTheme.Colors.vipSilver : AppTheme.Colors.textSecondary))
+                                        }
+                                        
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(item.name)
+                                                .font(AppTheme.Typography.callout)
+                                                .fontWeight(.bold)
+                                                .foregroundStyle(AppTheme.Colors.textPrimary)
+                                            
+                                            Text("成交 \(item.transactionCount) 筆")
+                                                .font(AppTheme.Typography.caption2)
+                                                .foregroundStyle(AppTheme.Colors.textSecondary)
+                                        }
+                                        
+                                        Spacer()
+                                        
+                                        Text(item.amount.formattedCurrency)
+                                            .font(AppTheme.Typography.body)
+                                            .fontWeight(.bold)
+                                            .foregroundStyle(AppTheme.Colors.accent)
+                                    }
+                                    .padding(.vertical, 10)
+                                    
+                                    if index < consultantData.count - 1 {
+                                        Divider()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(AppTheme.Spacing.md)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.lg))
+                    .shadow(color: .black.opacity(0.03), radius: 6, x: 0, y: 3)
                 }
                 .padding(AppTheme.Spacing.md)
             }
