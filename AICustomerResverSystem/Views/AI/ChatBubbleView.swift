@@ -7,11 +7,14 @@ struct ChatBubbleView: View {
     let message: ChatMessage
     
     private var messageAttributedString: AttributedString {
+        var attrStr: AttributedString
         do {
-            return try AttributedString(markdown: message.content)
+            attrStr = try AttributedString(markdown: message.content)
         } catch {
-            return AttributedString(message.content)
+            attrStr = AttributedString(message.content)
         }
+        attrStr.foregroundColor = message.isFromUser ? .white : Color.primary
+        return attrStr
     }
     
     var body: some View {
@@ -33,7 +36,7 @@ struct ChatBubbleView: View {
                 // Message bubble container
                 Text(messageAttributedString)
                     .font(AppTheme.Typography.callout)
-                    .foregroundStyle(message.isFromUser ? .white : AppTheme.Colors.textPrimary)
+                    .foregroundStyle(message.isFromUser ? .white : Color.primary)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(
