@@ -17,7 +17,7 @@ struct DashboardView: View {
     @State private var showCustomerDetailSheet = false
     
     @Query private var dutyRosters: [DutyRoster]
-    @State private var showDutyRosterForm = false
+    @State private var showDutyRosterManage = false
     
     private var selectedBranchName: String {
         if let branchID = selectedBranchID,
@@ -67,10 +67,10 @@ struct DashboardView: View {
                             Spacer()
                             
                             Button {
-                                showDutyRosterForm = true
+                                showDutyRosterManage = true
                             } label: {
                                 HStack(spacing: 2) {
-                                    Image(systemName: "pencil.line")
+                                    Image(systemName: "calendar.badge.plus")
                                     Text("登錄排班")
                                 }
                                 .font(.system(size: 11, weight: .bold))
@@ -373,8 +373,8 @@ struct DashboardView: View {
             )
             .modelContext(modelContext)
         }
-        .sheet(isPresented: $showDutyRosterForm) {
-            DutyRosterFormView(
+        .sheet(isPresented: $showDutyRosterManage) {
+            DutyRosterManageView(
                 activeBranchID: selectedBranchID,
                 activeBranchName: selectedBranchName
             )

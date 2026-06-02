@@ -51,6 +51,7 @@ struct DutyRosterFormView: View {
     
     let activeBranchID: PersistentIdentifier?
     let activeBranchName: String
+    var initialDate: Date = Date()
     
     @Query(sort: \Branch.name) private var branches: [Branch]
     @State private var selectedBranchID: PersistentIdentifier? = nil
@@ -69,7 +70,7 @@ struct DutyRosterFormView: View {
         NavigationStack {
             Form {
                 Section("排班基本資訊") {
-                    DatePicker("值班日期", selection: $selectedDate, displayedComponents: .date)
+                    DatePicker("值班日期", selection: $selectedDate, in: dateRange, displayedComponents: .date)
                         .font(AppTheme.Typography.body)
                     
                     if activeBranchID != nil {
@@ -214,6 +215,7 @@ struct DutyRosterFormView: View {
                 if let branchID = activeBranchID {
                     selectedBranchID = branchID
                 }
+                selectedDate = initialDate
                 loadExistingRoster()
             }
             .onChange(of: selectedDate) { _, _ in
@@ -226,6 +228,43 @@ struct DutyRosterFormView: View {
     }
     
     // MARK: - Logic Helpers
+    
+    private var dateRange: ClosedRange<Date> {
+        let calendar = Calendar.current
+        let start = calendar.date(byAdding: .month, value: -6, to: Date()) ?? Date()
+        let end = calendar.date(byAdding: .month, value: 6, to: Date()) ?? Date()
+        return start...end
+    }
+    
+    private func getDoctorIndex(_ id: UUID) -> Int {
+        doctors.firstIndex(where: { $0.id == id }) ?? 0
+    }
+    
+    private func removeDoctor(_ id: UUID) {
+        if let idx = doctors.firstIndex(where: { $0.id == id }) {
+            doctors.remove(at: idx)
+        }
+    }
+    
+    private func getManagerIndex(_ id: UUID) -> Int {
+        managers.firstIndex(where: { $0.id == id }) ?? 0
+    }
+    
+    private func removeManager(_ id: UUID) {
+        if let idx = managers.firstIndex(where: { $0.id == id }) {
+            managers.remove(at: idx)
+        }
+    }
+    
+    private func getConsultantIndex(_ id: UUID) -> Int {
+        consultants.firstIndex(where: { $0.id == id }) ?? 0
+    }
+    
+    private func removeConsultant(_ id: UUID) {
+        if let idx = consultants.firstIndex(where: { $0.id == id }) {
+            consultants.remove(at: idx)
+        }
+    }
     
     private func loadExistingRoster() {
         guard let branchID = selectedBranchID else { return }
