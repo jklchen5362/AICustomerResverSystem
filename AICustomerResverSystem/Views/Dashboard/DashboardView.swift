@@ -84,11 +84,11 @@ struct DashboardView: View {
                         .padding(.bottom, 2)
                         
                         if let roster = todayRoster,
-                           (!roster.onDutyDoctor.isEmpty || !roster.onDutyManager.isEmpty || !roster.onDutyConsultant.isEmpty) {
+                           (!roster.onDutyDoctors.isEmpty || !roster.onDutyManagers.isEmpty || !roster.onDutyConsultants.isEmpty) {
                             HStack(spacing: AppTheme.Spacing.md) {
                                 rosterStaffItem(
                                     role: "值班醫師",
-                                    name: roster.onDutyDoctor.isEmpty ? "未安排" : roster.onDutyDoctor,
+                                    name: roster.onDutyDoctors.isEmpty ? "未安排" : roster.onDutyDoctors.joined(separator: "、"),
                                     icon: "stethoscope",
                                     color: AppTheme.Colors.accent
                                 )
@@ -97,7 +97,7 @@ struct DashboardView: View {
                                 
                                 rosterStaffItem(
                                     role: "值班店長",
-                                    name: roster.onDutyManager.isEmpty ? "未安排" : roster.onDutyManager,
+                                    name: roster.onDutyManagers.isEmpty ? "未安排" : roster.onDutyManagers.joined(separator: "、"),
                                     icon: "shield.checkered",
                                     color: AppTheme.Colors.accentSecondary
                                 )
@@ -106,7 +106,7 @@ struct DashboardView: View {
                                 
                                 rosterStaffItem(
                                     role: "值班諮詢師",
-                                    name: roster.onDutyConsultant.isEmpty ? "未安排" : roster.onDutyConsultant,
+                                    name: roster.onDutyConsultants.isEmpty ? "未安排" : roster.onDutyConsultants.joined(separator: "、"),
                                     icon: "person.badge.clock.fill",
                                     color: AppTheme.Colors.info
                                 )
@@ -364,7 +364,7 @@ struct DashboardView: View {
             .onChange(of: appointments.map { "\($0.persistentModelID)-\($0.status.rawValue)-\($0.appointmentDate.timeIntervalSince1970)" }) { _, _ in refreshData() }
             .onChange(of: packages.map { "\($0.persistentModelID)-\($0.remainingSessions)" }) { _, _ in refreshData() }
             .onChange(of: invoices.map { "\($0.persistentModelID)-\($0.amount)" }) { _, _ in refreshData() }
-            .onChange(of: dutyRosters.map { "\($0.persistentModelID)-\($0.onDutyDoctor)-\($0.onDutyManager)-\($0.onDutyConsultant)" }) { _, _ in refreshData() }
+            .onChange(of: dutyRosters.map { "\($0.persistentModelID)-\($0.onDutyDoctors.joined(separator: ","))-\($0.onDutyManagers.joined(separator: ","))-\($0.onDutyConsultants.joined(separator: ","))" }) { _, _ in refreshData() }
         }
         .sheet(isPresented: $showCustomerDetailSheet) {
             DashboardCustomerListView(

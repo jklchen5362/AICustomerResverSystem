@@ -5,6 +5,46 @@
 import SwiftUI
 import SwiftData
 
+struct RosterStaff: Identifiable, Equatable {
+    let id = UUID()
+    var name: String
+}
+
+// Extracted Subview for clean, fast compilation in SwiftUI view builders
+struct StaffRowView: View {
+    let roleName: String
+    let index: Int
+    let systemImage: String
+    let accentColor: Color
+    @Binding var name: String
+    let onDelete: () -> Void
+    let canDelete: Bool
+    
+    var body: some View {
+        HStack {
+            Label("\(roleName) \(index + 1)", systemImage: systemImage)
+                .font(AppTheme.Typography.caption)
+                .foregroundStyle(accentColor)
+                .frame(width: 80, alignment: .leading)
+            
+            TextField("請輸入姓名", text: $name)
+                .font(AppTheme.Typography.body)
+            
+            if canDelete {
+                Button(action: {
+                    withAnimation(AppTheme.Animations.quick) {
+                        onDelete()
+                    }
+                }) {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(.red)
+                }
+                .buttonStyle(.borderless) // Prevent triggering row selection in Form
+            }
+        }
+    }
+}
+
 struct DutyRosterFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -16,9 +56,11 @@ struct DutyRosterFormView: View {
     @State private var selectedBranchID: PersistentIdentifier? = nil
     
     @State private var selectedDate = Date()
-    @State private var doctorName = ""
-    @State private var managerName = ""
-    @State private var consultantName = ""
+    
+    // Roster arrays with initial empty field using RosterStaff helper
+    @State private var doctors: [RosterStaff] = [RosterStaff(name: "")]
+    @State private var managers: [RosterStaff] = [RosterStaff(name: "")]
+    @State private var consultants: [RosterStaff] = [RosterStaff(name: "")]
     @State private var notes = ""
     
     @State private var isSaving = false
@@ -50,35 +92,96 @@ struct DutyRosterFormView: View {
                     }
                 }
                 
-                Section("今日值班人員名單") {
-                    HStack {
-                        Label("值班醫師", systemImage: "stethoscope")
-                            .font(AppTheme.Typography.body)
-                            .foregroundStyle(AppTheme.Colors.accent)
-                        Spacer()
-                        TextField("請輸入醫師姓名", text: $doctorName)
-                            .multilineTextAlignment(.trailing)
-                            .font(AppTheme.Typography.body)
+                // 1. Doctors (1-3位)
+                Section(header: HStack {
+                    Text("今日值班醫師 (最多 3 位)")
+                    Spacer()
+                    if doctors.count < 3 {
+                        Button {
+                            withAnimation(AppTheme.Animations.quick) {
+                                doctors.append(RosterStaff(name: ""))
+                            }
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(AppTheme.Colors.accent)
+                        }
                     }
-                    
-                    HStack {
-                        Label("值班店長", systemImage: "shield.checkered")
-                            .font(AppTheme.Typography.body)
-                            .foregroundStyle(AppTheme.Colors.accentSecondary)
-                        Spacer()
-                        TextField("請輸入店長姓名", text: $managerName)
-                            .multilineTextAlignment(.trailing)
-                            .font(AppTheme.Typography.body)
+                }) {
+                    ForEach(Array(doctors.enumerated()), id: \.element.id) { index, doctor in
+                        StaffRowView(
+                            roleName: "醫師",
+                            index: index,
+                            systemImage: "stethoscope",
+                            accentColor: AppTheme.Colors.accent,
+                            name: $doctors[index].name,
+                            onDelete: {
+                                doctors.remove(at: index)
+                            },
+                            canDelete: doctors.count > 1
+                        )
                     }
-                    
-                    HStack {
-                        Label("值班諮詢師", systemImage: "person.badge.clock.fill")
-                            .font(AppTheme.Typography.body)
-                            .foregroundStyle(AppTheme.Colors.info)
-                        Spacer()
-                        TextField("請輸入諮詢師姓名", text: $consultantName)
-                            .multilineTextAlignment(.trailing)
-                            .font(AppTheme.Typography.body)
+                }
+                
+                // 2. Managers / Assistant Managers (1-3位)
+                Section(header: HStack {
+                    Text("今日值班店長/副店長 (最多 3 位)")
+                    Spacer()
+                    if managers.count < 3 {
+                        Button {
+                            withAnimation(AppTheme.Animations.quick) {
+                                managers.append(RosterStaff(name: ""))
+                            }
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(AppTheme.Colors.accentSecondary)
+                        }
+                    }
+                }) {
+                    ForEach(Array(managers.enumerated()), id: \.element.id) { index, manager in
+                        StaffRowView(
+                            roleName: "店長/副店",
+                            index: index,
+                            systemImage: "shield.checkered",
+                            accentColor: AppTheme.Colors.accentSecondary,
+                            name: $managers[index].name,
+                            onDelete: {
+                                managers.remove(at: index)
+                            },
+                            canDelete: managers.count > 1
+                        )
+                    }
+                }
+                
+                // 3. Consultants (1-8位)
+                Section(header: HStack {
+                    Text("今日值班諮詢師 (最多 8 位)")
+                    Spacer()
+                    if consultants.count < 8 {
+                        Button {
+                            withAnimation(AppTheme.Animations.quick) {
+                                consultants.append(RosterStaff(name: ""))
+                            }
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(AppTheme.Colors.info)
+                        }
+                    }
+                }) {
+                    ForEach(Array(consultants.enumerated()), id: \.element.id) { index, consultant in
+                        StaffRowView(
+                            roleName: "諮詢師",
+                            index: index,
+                            systemImage: "person.badge.clock.fill",
+                            accentColor: AppTheme.Colors.info,
+                            name: $consultants[index].name,
+                            onDelete: {
+                                consultants.remove(at: index)
+                            },
+                            canDelete: consultants.count > 1
+                        )
                     }
                 }
                 
@@ -88,7 +191,7 @@ struct DutyRosterFormView: View {
                 }
             }
             .background(AppTheme.Colors.background)
-            .navigationTitle("登錄今日值班人員")
+            .navigationTitle("登錄今日值班名單")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -104,7 +207,7 @@ struct DutyRosterFormView: View {
                     }
                     .fontWeight(.bold)
                     .foregroundStyle(AppTheme.Colors.accent)
-                    .disabled(isSaving || (activeBranchID == nil && selectedBranchID == nil))
+                    .disabled(isSaving || (selectedBranchID == nil))
                 }
             }
             .onAppear {
@@ -133,20 +236,18 @@ struct DutyRosterFormView: View {
         let descriptor = FetchDescriptor<DutyRoster>()
         let rosters = (try? modelContext.fetch(descriptor)) ?? []
         
-        // Find existing record matching date and branch
         if let existing = rosters.first(where: {
             $0.branch?.persistentModelID == branchID &&
             $0.date >= start && $0.date <= end
         }) {
-            doctorName = existing.onDutyDoctor
-            managerName = existing.onDutyManager
-            consultantName = existing.onDutyConsultant
+            doctors = existing.onDutyDoctors.isEmpty ? [RosterStaff(name: "")] : existing.onDutyDoctors.map { RosterStaff(name: $0) }
+            managers = existing.onDutyManagers.isEmpty ? [RosterStaff(name: "")] : existing.onDutyManagers.map { RosterStaff(name: $0) }
+            consultants = existing.onDutyConsultants.isEmpty ? [RosterStaff(name: "")] : existing.onDutyConsultants.map { RosterStaff(name: $0) }
             notes = existing.notes
         } else {
-            // Reset fields
-            doctorName = ""
-            managerName = ""
-            consultantName = ""
+            doctors = [RosterStaff(name: "")]
+            managers = [RosterStaff(name: "")]
+            consultants = [RosterStaff(name: "")]
             notes = ""
         }
     }
@@ -158,26 +259,30 @@ struct DutyRosterFormView: View {
         let start = selectedDate.startOfDay
         let end = selectedDate.endOfDay
         
+        // Clean empty fields
+        let cleanedDoctors = doctors.map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        let cleanedManagers = managers.map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        let cleanedConsultants = consultants.map { $0.name.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        
         let descriptor = FetchDescriptor<DutyRoster>()
         let rosters = (try? modelContext.fetch(descriptor)) ?? []
         
-        // Find if a record already exists
         let rosterRecord: DutyRoster
         if let existing = rosters.first(where: {
             $0.branch?.persistentModelID == branchID &&
             $0.date >= start && $0.date <= end
         }) {
             rosterRecord = existing
-            rosterRecord.onDutyDoctor = doctorName
-            rosterRecord.onDutyManager = managerName
-            rosterRecord.onDutyConsultant = consultantName
+            rosterRecord.onDutyDoctors = cleanedDoctors
+            rosterRecord.onDutyManagers = cleanedManagers
+            rosterRecord.onDutyConsultants = cleanedConsultants
             rosterRecord.notes = notes
         } else {
             rosterRecord = DutyRoster(
                 date: selectedDate,
-                onDutyDoctor: doctorName,
-                onDutyManager: managerName,
-                onDutyConsultant: consultantName,
+                onDutyDoctors: cleanedDoctors,
+                onDutyManagers: cleanedManagers,
+                onDutyConsultants: cleanedConsultants,
                 notes: notes
             )
             modelContext.insert(rosterRecord)
@@ -188,7 +293,7 @@ struct DutyRosterFormView: View {
         
         do {
             try modelContext.save()
-            print("[DutyRoster] Roster saved successfully.")
+            print("[DutyRoster] Multi-staff roster saved successfully.")
             dismiss()
         } catch {
             print("[DutyRoster] Error saving roster: \(error)")

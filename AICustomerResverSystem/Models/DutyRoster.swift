@@ -9,9 +9,9 @@ import SwiftData
 final class DutyRoster {
     var rosterID: String
     var date: Date
-    var onDutyDoctor: String
-    var onDutyManager: String
-    var onDutyConsultant: String
+    var onDutyDoctors: [String]
+    var onDutyManagers: [String]
+    var onDutyConsultants: [String]
     var notes: String
     
     // Relationships
@@ -21,16 +21,16 @@ final class DutyRoster {
     init(
         rosterID: String = "RST-" + UUID().uuidString.prefix(6).uppercased(),
         date: Date = Date(),
-        onDutyDoctor: String = "",
-        onDutyManager: String = "",
-        onDutyConsultant: String = "",
+        onDutyDoctors: [String] = [],
+        onDutyManagers: [String] = [],
+        onDutyConsultants: [String] = [],
         notes: String = ""
     ) {
         self.rosterID = rosterID
         self.date = date
-        self.onDutyDoctor = onDutyDoctor
-        self.onDutyManager = onDutyManager
-        self.onDutyConsultant = onDutyConsultant
+        self.onDutyDoctors = onDutyDoctors
+        self.onDutyManagers = onDutyManagers
+        self.onDutyConsultants = onDutyConsultants
         self.notes = notes
     }
 }
