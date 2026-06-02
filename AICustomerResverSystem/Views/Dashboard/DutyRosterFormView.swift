@@ -92,11 +92,11 @@ struct DutyRosterFormView: View {
                     }
                 }
                 
-                // 1. Doctors (1-3位)
+                // 1. Doctors (1-8位)
                 Section(header: HStack {
-                    Text("今日值班醫師 (最多 3 位)")
+                    Text("今日值班醫師 (最多 8 位)")
                     Spacer()
-                    if doctors.count < 3 {
+                    if doctors.count < 8 {
                         Button {
                             withAnimation(AppTheme.Animations.quick) {
                                 doctors.append(RosterStaff(name: ""))
